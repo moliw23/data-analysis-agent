@@ -8,6 +8,7 @@
 """
 
 from app.models.base import Base, SoftDeleteMixin, TimestampMixin, UuidPkMixin
+from app.models.dataset import Dataset, DatasetQuery
 from app.models.conversation import Conversation, Memory, Message
 from app.models.knowledge import FTS_DDL, KbChunk, KbDocument, KbQuery, KnowledgeBase
 from app.models.llm import LlmCallLog, LlmProvider, LlmRoute
@@ -21,6 +22,8 @@ __all__ = [
     "AppSetting",
     "Base",
     "Conversation",
+    "Dataset",
+    "DatasetQuery",
     "EmbeddingProbe",
     "FTS_DDL",
     "FeatureFlag",

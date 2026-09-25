@@ -120,7 +120,8 @@ def test_body_level_gate_server_storage(client):
     assert client.post("/api/v1/datasets", json=body_local).json()["code"] == 4090
 
     _set_mode(client, "full")
-    assert client.post("/api/v1/datasets", json=body_server).json()["code"] == 4090
+    # P2-6a 起 server 登记业务已实现（元数据登记 201）；local 语义不变仍 4090
+    assert client.post("/api/v1/datasets", json=body_server).json()["code"] == 0
     assert client.post("/api/v1/datasets", json=body_local).json()["code"] == 4090
 
 
