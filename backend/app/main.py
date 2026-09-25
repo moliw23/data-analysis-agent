@@ -34,7 +34,18 @@ async def lifespan(app: FastAPI):
     logger.info("starting %s v%s", settings.app_name, settings.app_version)
     init_db()
     logger.info("db ready at %s", settings.db_file)
+    # AC-22：同进程 APScheduler，重启后重注册 enabled 任务；测试环境不启动
+    import os
+
+    if not os.environ.get("APP_SCHEDULER_DISABLED"):
+        from app.services.schedule_service import start_scheduler
+
+        start_scheduler()
+        logger.info("scheduler started")
     yield
+    from app.services.schedule_service import stop_scheduler
+
+    stop_scheduler()
     logger.info("shutdown complete")
 
 
