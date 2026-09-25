@@ -27,7 +27,7 @@ describe('ScheduleView', () => {
     render(<ScheduleView hasData={true} onRun={vi.fn()} />)
     fireEvent.change(screen.getByPlaceholderText('例：每周一销售周报'), { target: { value: '销售周报' } })
     fireEvent.click(screen.getByText('创建调度'))
-    expect(screen.getByText(/我的调度（1）/)).toBeTruthy()
+    expect(screen.getByText(/我的本地调度（1）/)).toBeTruthy()
     expect(screen.getByText(/销售周报/)).toBeTruthy()
   })
 

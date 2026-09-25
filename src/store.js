@@ -12,6 +12,7 @@ import { parseLogFile } from './logParser.js'
 import { parseStreamFile } from './streamParse.js'
 import { isLLMConfigured, planAnalysis, narrateInsights, withLLMFallback, parseQuestion, textToSQL } from './llmProvider.js'
 import { validateSQL } from './sqlGuard.js'
+import { syncUserMessage, syncBotMessage } from './backend/conversationSync.js'
 import { executeSQL } from './sqlEngine.js'
 import { getDatasetsMeta as loadDatasetsMeta, saveDatasetMeta, renameDataset as renameStoredDataset, deleteDataset as deleteStoredDataset, saveLinks as persistLinks } from './datasetStore.js'
 import { saveDatasetRows, loadDatasetRows, deleteDatasetRows, listDatasetIds, deleteOrphanRows } from './indexedDbStore.js'
@@ -561,9 +562,12 @@ export const useStore = create((set, get) => ({
   openUpload: () => set({ uploadTab: 'file', view: 'upload' }),
 
   // 追问（对话式分析）：LLM 意图/Text-to-SQL → 引擎真实计算；无 LLM 降级规则 SQL + 规则问答
+  hydrateChat: (msgs) => set(s => (s.chat.length ? s : { chat: msgs })),
+
   sendQuestion: async (text) => {
     if (!text.trim() || !get().table) return
     set(s => ({ chat: [...s.chat, { role: 'user', text }] }))
+    syncUserMessage(text, get().fileName) // AC-20 双轨同步（离线静默）
     let ans = null
     if (isLLMConfigured()) {
       const res = await withLLMFallback(() => parseQuestion(schemaSummaryFor(get().table), text), () => null)
@@ -618,6 +622,7 @@ export const useStore = create((set, get) => ({
     }
     if (!ans) ans = chatAnswer(get().table, text)
     set(s => ({ chat: [...s.chat, { role: 'bot', text: ans.text, chart: ans.chart, table: ans.table, sql: ans.sql, caliber: ans.caliber }] }))
+    syncBotMessage(ans.text, get().fileName) // AC-20
   },
 
   openChart: (c) => set({ selectedChart: c, view: 'chart' }),

@@ -656,10 +656,17 @@ function SettingsPanel({ theme, setTheme, onSaved }) {
 }
 
 // ---------- 追问面板 ----------
-function ChatPanel({ messages, onClose, onSend, suggestions }) {
+function ChatPanel({ messages, onClose, onSend, suggestions, fileName }) {
   const [text, setText] = useState('')
   const msgsRef = useRef(null)
   useEffect(() => { if (msgsRef.current) msgsRef.current.scrollTop = msgsRef.current.scrollHeight }, [messages])
+  useEffect(() => {
+    if (messages.length === 0 && fileName) {
+      import('../backend/conversationSync.js').then(({ loadRecentMessages }) =>
+        loadRecentMessages(fileName).then(h => { if (h.length) useStore.getState().hydrateChat(h) })
+      )
+    }
+  }, []) // eslint-disable-line
   return (
     <div className="chat-panel">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>

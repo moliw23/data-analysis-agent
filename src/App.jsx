@@ -291,6 +291,7 @@ export default function App() {
           {!chatOpen && <button className="fab" onClick={() => setChatOpen(true)}><MessageCircle size={18} /><span>问数据</span></button>}
           {chatOpen && (
             <ChatPanel
+              fileName={fileName}
               messages={chat}
               onClose={() => setChatOpen(false)}
               onSend={sendQuestion}
