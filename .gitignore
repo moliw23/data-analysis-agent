@@ -13,6 +13,10 @@ tmp/
 vite.config.js.timestamp-*.mjs
 *.timestamp-*.mjs
 
+# 架构调研期临时文件残留（safe-delete 无法删除；正式脚本见 scripts/check_contract.py）
+tmp_check_*.py
+tmp_check_*.txt
+
 # ===== 环境与密钥 =====
 .env
 .env.*
@@ -35,3 +39,13 @@ Thumbs.db
 
 # 误生成/打包产物
 /dev/null
+
+# ===== 后端（FastAPI） =====
+backend/.venv/
+backend/data/
+# .env.example 需要入库（配置骨架，不含密钥）
+!backend/.env.example
+
+# ===== 门禁/校验临时输出（非源码） =====
+.gate.txt
+.lum.ps1

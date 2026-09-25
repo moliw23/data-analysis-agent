@@ -3,20 +3,22 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>data-analysis-agent · 纯前端数据分析智能体</title>
+<title>data-analysis-agent · 纯前端数据分析平台</title>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <style>
   :root {
-    --bg: #f6f8fc;
+    --bg: #FBFAF8;
     --card: #ffffff;
-    --ink: #1f2733;
-    --muted: #64748b;
-    --line: #e6ebf2;
-    --brand: #4f6ef7;
-    --brand-2: #7c3aed;
-    --accent: #0ea5e9;
-    --ok: #16a34a;
-    --shadow: 0 1px 3px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06);
+    --ink: #1A1C1E;
+    --muted: #6E6A62;
+    --line: #E6E2DA;
+    --brand: #1C7C63;
+    --brand-2: #155E4A;
+    --accent: #1C7C63;
+    --ok: #2E7D5B;
+    --shadow: 0 1px 2px rgba(26,28,30,.04), 0 8px 24px rgba(26,28,30,.05);
+    --serif: "Songti SC", "STSong", Georgia, "Times New Roman", "Noto Serif SC", serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
   }
   * { box-sizing: border-box; }
   body {
@@ -25,6 +27,7 @@
     background: var(--bg);
     color: var(--ink);
     line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
   }
   a { color: var(--brand); text-decoration: none; }
   a:hover { text-decoration: underline; }
@@ -32,25 +35,26 @@
 
   /* Header */
   header {
-    background: linear-gradient(135deg, #4f6ef7 0%, #7c3aed 60%, #0ea5e9 100%);
+    background: var(--ink);
     color: #fff;
-    padding: 56px 20px 48px;
+    padding: 64px 20px 52px;
     text-align: center;
+    border-bottom: 3px solid var(--brand);
   }
-  header h1 { margin: 0 0 8px; font-size: 34px; letter-spacing: .5px; }
-  header p { margin: 0 auto; max-width: 720px; opacity: .94; font-size: 16px; }
-  .badges { margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  header h1 { margin: 0 0 10px; font-family: var(--serif); font-size: 38px; letter-spacing: -.01em; font-weight: 600; }
+  header p { margin: 0 auto; max-width: 720px; opacity: .9; font-size: 16px; }
+  .badges { margin-top: 22px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
   .badge {
     display: inline-flex; align-items: center; gap: 6px;
-    background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28);
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18);
     padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
-    backdrop-filter: blur(4px);
   }
 
   /* Sections */
-  section { margin-top: 40px; }
+  section { margin-top: 44px; }
   h2 {
-    font-size: 22px; margin: 0 0 16px; padding-left: 12px;
+    font-family: var(--serif);
+    font-size: 24px; margin: 0 0 16px; padding-left: 12px; font-weight: 600;
     border-left: 4px solid var(--brand);
   }
   h2 .em { margin-right: 8px; }
@@ -112,8 +116,8 @@
 <body>
 
 <header>
-  <h1>📊 data-analysis-agent</h1>
-  <p>一个<strong>纯前端、零后端</strong>的数据分析智能体：数据在浏览器内完成接入、清洗、分析、可视化与报告导出，全程不出本地。规则引擎 + 流式 LLM 双轮驱动。</p>
+  <h1>data-analysis-agent</h1>
+  <p>一个<strong>纯前端、零后端</strong>的数据分析平台：数据在浏览器内完成接入、清洗、分析、可视化与报告导出，全程不出本地。内置规则引擎，并可接入流式分析模型增强结论。</p>
   <div class="badges">
     <span class="badge">🧪 156 项单测全绿</span>
     <span class="badge">📈 行覆盖 56.7%+</span>
@@ -140,7 +144,7 @@
     <h2><span class="em">💡</span>核心能力</h2>
     <ul class="findings">
       <li><strong>纯前端零后端</strong>：全部分析在浏览器内完成，原始数据存 IndexedDB，<strong>不出本地</strong>，无隐私外泄风险。</li>
-      <li><strong>规则 + LLM 双引擎</strong>：确定性分析规则（质量评分 / 洞察 / 同环比 / 预测 / 异常）叠加流式 LLM（追问、清洗建议、报告润色）。</li>
+      <li><strong>规则引擎 + 可接入模型</strong>：确定性分析规则（质量评分 / 洞察 / 同环比 / 预测 / 异常）叠加可选流式分析模型（数据问答、清洗建议、报告润色）。</li>
       <li><strong>交互式看板</strong>：9 种图表自动生成，支持筛选下钻、图表详情、质量分总览。</li>
       <li><strong>多表关联 / 联合分析 / 透视</strong>：把多份 CSV/Excel 关联成一张宽表再分析。</li>
       <li><strong>内置 SQL 引擎</strong>：通过 alasql 直接在浏览器跑 SQL 查询。</li>
@@ -154,12 +158,12 @@
     <div class="grid">
       <div class="feat"><div class="t">📊 数据可视化看板</div><div class="d">9 种 ECharts 图表 + 质量分 + 洞察 + 筛选下钻</div></div>
       <div class="feat"><div class="t">📥 多源数据接入</div><div class="d">CSV / Excel / JSON / 日志 / API / 数据库 / 多表关联</div></div>
-      <div class="feat"><div class="t">🧠 智能分析</div><div class="d">质量评分 · 洞察 · 同环比 · 预测 · 异常检测</div></div>
+      <div class="feat"><div class="t">📈 深度分析</div><div class="d">质量评分 · 洞察 · 同环比 · 预测 · 异常检测</div></div>
       <div class="feat"><div class="t">🧹 数据清洗</div><div class="d">缺失值 / 异常值 / 去重 / 类型修正，带影响预览</div></div>
       <div class="feat"><div class="t">📋 模板库</div><div class="d">保存 / 套用 / 重命名 / 删除 / 导出分析模板</div></div>
       <div class="feat"><div class="t">⏰ 定时任务</div><div class="d">自动跑分析并推送（问题 · 通道可配）</div></div>
       <div class="feat"><div class="t">📄 报告导出</div><div class="d">看板 + 洞察一键导出 PPTX</div></div>
-      <div class="feat"><div class="t">💬 对话式分析</div><div class="d">OpenAI 兼容 LLM 流式接入，边生成边看</div></div>
+      <div class="feat"><div class="t">💬 数据问答</div><div class="d">OpenAI 兼容模型流式接入，边生成边看</div></div>
       <div class="feat"><div class="t">🗄️ 本地持久化</div><div class="d">IndexedDB 存原始行 + localStorage 存配置</div></div>
     </div>
   </section>
@@ -176,7 +180,7 @@
     <pre class="diagram">
 ┌──────────────────────────────────────────────────────┐
 │                  浏览器 (React 18 SPA)                │
-│        9 个视图 + ECharts 看板 + 对话式分析            │
+│        9 个视图 + ECharts 看板 + 数据问答               │
 └───────────────────────┬──────────────────────────────┘
                         │ Zustand actions
 ┌───────────────────────▼──────────────────────────────┐
@@ -186,9 +190,9 @@
                 │                        │
                 ▼                        ▼
 ┌──────────────────────────┐  ┌──────────────────────────┐
-│    分析引擎 src/engine    │  │    LLM 流式接入           │
+│    分析引擎 src/engine    │  │    分析模型流式接入        │
 │ analyze / timeseries /   │  │   OpenAI 兼容接口         │
-│ manualChart / sql / join │  │   洞察 / 追问 / 清洗建议   │
+│ manualChart / sql / join │  │   洞察 / 问答 / 清洗建议    │
 │ /clean / correlation /   │  └──────────────────────────┘
 │ pivot / merge / schema   │
 └───────────────┬──────────┘
@@ -218,7 +222,7 @@
         <tr><td>报告导出</td><td>pptxgenjs 3.12</td></tr>
         <tr><td>图标</td><td>lucide-react 0.400</td></tr>
         <tr><td>持久化</td><td>IndexedDB + localStorage</td></tr>
-        <tr><td>AI 接入</td><td>OpenAI 兼容 /chat/completions（流式）</td></tr>
+        <tr><td>模型接入</td><td>OpenAI 兼容 /chat/completions（流式）</td></tr>
         <tr><td>测试</td><td>Vitest 2.1 · @testing-library/react 16 · jsdom 25 · @vitest/coverage-v8</td></tr>
         <tr><td>质量</td><td>ESLint 8.57 · Prettier 3.9</td></tr>
         <tr><td>CI</td><td>GitHub Actions（lint → test → build）</td></tr>
@@ -288,8 +292,8 @@ data-analysis-agent/
   </section>
 
   <footer>
-    data-analysis-agent · 纯前端数据分析智能体 ·
-    <a href="https://github.com/moliw23/ecommerce-analytics" target="_blank" rel="noreferrer">GitHub</a>
+    data-analysis-agent · 纯前端数据分析平台 ·
+    <a href="https://github.com/moliw23/data-analysis-agent" target="_blank" rel="noreferrer">GitHub</a>
   </footer>
 
 </div>
@@ -308,8 +312,8 @@ data-analysis-agent/
       data: [3280, 2670, 1940, 1260, 880],
       itemStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: '#4f6ef7' },
-          { offset: 1, color: '#7c3aed' }
+          { offset: 0, color: '#1C7C63' },
+          { offset: 1, color: '#46B494' }
         ])
       },
       barWidth: '52%'

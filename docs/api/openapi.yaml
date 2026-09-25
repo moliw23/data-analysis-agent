@@ -1,0 +1,2435 @@
+openapi: 3.0.3
+info:
+  title: 数据分析 Agent 本地服务 API
+  version: 1.0.0
+  description: |
+    数据分析 Agent 的本地 FastAPI 服务契约。前端据此生成 TypeScript 类型与 MSW Mock，
+    后端据此实现。详见 docs/02-架构.md。
+
+    统一约定：
+    - 所有端点带 /api/v1 前缀。
+    - 统一响应信封 { code, data, message }，code=0 表示成功。
+    - 分页统一 { items, total, page, limit, hasMore } 置于 data 内。
+    - 认证为「仅本机回环 + Origin 白名单」；标注 x-local-confirm 的端点需
+      请求头 X-Local-Confirm: true。
+    - 禁止静默降级：任何能力降级必须在响应字段上可见。
+  contact:
+    name: 高见远（首席架构师）
+servers:
+  - url: http://127.0.0.1:8000
+    description: 本地服务（生产由本服务托管前端 dist，单端口）
+
+tags:
+  - name: health
+    description: 健康检查与能力探测
+  - name: settings
+    description: 系统设置与隐私档位（privacy_mode 闸门的唯一管理入口）
+  - name: llm
+    description: LLM 网关、供应商、路由、用量与日志
+  - name: conversations
+    description: 会话与消息
+  - name: memories
+    description: 长期记忆
+  - name: knowledge
+    description: RAG 知识库、文档与检索
+  - name: datasets
+    description: 数据集元数据与服务端只读 SQL
+  - name: schedules
+    description: 定时调度与运行历史
+  - name: notifications
+    description: 调度结果推送
+  - name: db-proxy
+    description: 外部 MySQL/PostgreSQL 只读代理
+
+paths:
+
+  # ────────────────────────────── health ──────────────────────────────
+  /api/v1/health:
+    get:
+      tags: [health]
+      summary: 存活与子系统状态
+      operationId: getHealth
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/HealthData'
+
+  /api/v1/meta/capabilities:
+    get:
+      tags: [health]
+      summary: 能力清单（前端降级开关的唯一来源）
+      operationId: getCapabilities
+      responses:
+        '200':
+          description: 成功。字段必须真实反映后端探测结果，不得硬编码。
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Capabilities'
+
+  # ────────────────────────────── settings ──────────────────────────────
+  /api/v1/settings/privacy-mode:
+    get:
+      tags: [settings]
+      summary: 读取当前隐私档位及其生效边界
+      operationId: getPrivacyMode
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PrivacyModeStatus'
+    put:
+      tags: [settings]
+      summary: |
+        切换隐私档位。档位必须在接口层强制生效，不得只靠前端隐藏按钮。
+        strict 为默认档。降级（full/standard -> strict）不删除任何既有数据
+        （本机安全策略禁止删除），仅阻断后续访问，既有数据由被阻断的
+        端点返回 code=4030 并附降级提示。
+      operationId: putPrivacyMode
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrivacyModeUpdate'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PrivacyModeStatus'
+        '403':
+          description: 缺少 X-Local-Confirm（code=4010）
+
+  # ────────────────────────────── llm ──────────────────────────────
+  /api/v1/llm/chat:
+    post:
+      tags: [llm]
+      summary: 非流式补全（前端 4 个钩子的统一入口）
+      operationId: llmChat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LlmChatRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/LlmChatResult'
+        '502':
+          description: 上游全部 provider 失败（code=4220）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/v1/llm/chat/stream:
+    post:
+      tags: [llm]
+      summary: SSE 流式补全
+      operationId: llmChatStream
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LlmChatRequest'
+      responses:
+        '200':
+          description: |
+            text/event-stream。事件名：delta / usage / error / done。
+            delta 事件 data 为 {"content":"片段"}；done 事件 data 为完整 usage。
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /api/v1/llm/embeddings:
+    post:
+      tags: [llm]
+      summary: 嵌入代理（RAG 与内置探针共用）
+      operationId: llmEmbeddings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmbeddingsRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/EmbeddingsResult'
+        '502':
+          description: 上游不支持 embeddings（code=4221）。前端应切换关键词检索模式。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/v1/llm/providers:
+    get:
+      tags: [llm]
+      summary: 列出供应商（apiKey 只返回掩码）
+      operationId: listProviders
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ProviderView'
+    post:
+      tags: [llm]
+      summary: 新增供应商
+      operationId: createProvider
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCreate'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { type: string, format: uuid }
+                          apiKeyHint: { type: string, example: 'sk-****a1b2' }
+        '403':
+          description: 缺少 X-Local-Confirm（code=4010）
+
+  /api/v1/llm/providers/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      tags: [llm]
+      summary: 更新供应商（apiKey 省略则不改）
+      operationId: updateProvider
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderUpdate'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      tags: [llm]
+      summary: 停用供应商（软删并解除路由引用）
+      operationId: deleteProvider
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/v1/llm/providers/{id}/test:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [llm]
+      summary: 连通性测试（同时探 chat 与 embeddings，结果落 embedding_probes 表）
+      operationId: testProvider
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                probe:
+                  type: array
+                  items: { type: string, enum: [chat, embeddings] }
+                  default: [chat, embeddings]
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          chat:
+                            $ref: '#/components/schemas/ProbeResult'
+                          embeddings:
+                            allOf:
+                              - $ref: '#/components/schemas/ProbeResult'
+                              - properties:
+                                  dim: { type: integer, nullable: true }
+
+  /api/v1/llm/routes:
+    get:
+      tags: [llm]
+      summary: 查看 taskKey 到模型的路由表
+      operationId: getRoutes
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/LlmRoute'
+    put:
+      tags: [llm]
+      summary: 覆盖式更新路由表
+      operationId: putRoutes
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/LlmRoute'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /api/v1/llm/usage:
+    get:
+      tags: [llm]
+      summary: Token 用量聚合
+      operationId: getUsage
+      parameters:
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+        - name: groupBy
+          in: query
+          schema: { type: string, enum: [day, provider, model, task], default: day }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/UsageItem'
+                          total:
+                            $ref: '#/components/schemas/UsageItem'
+
+  /api/v1/llm/logs:
+    get:
+      tags: [llm]
+      summary: 调用日志分页
+      operationId: listLlmLogs
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          schema: { type: string, enum: [ok, error] }
+        - name: taskKey
+          in: query
+          schema: { $ref: '#/components/schemas/TaskKey' }
+        - name: providerId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/PageData'
+                          - properties:
+                              items:
+                                type: array
+                                items:
+                                  $ref: '#/components/schemas/LlmCallLog'
+
+  # ────────────────────────── conversations ──────────────────────────
+  /api/v1/conversations:
+    get:
+      tags: [conversations]
+      summary: 会话列表
+      operationId: listConversations
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: archived
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/PageData'
+                          - properties:
+                              items:
+                                type: array
+                                items:
+                                  $ref: '#/components/schemas/Conversation'
+    post:
+      tags: [conversations]
+      summary: 新建会话
+      operationId: createConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, maxLength: 200 }
+                datasetId: { type: string, format: uuid, nullable: true }
+                knowledgeBaseId: { type: string, format: uuid, nullable: true }
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Conversation'
+
+  /api/v1/conversations/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [conversations]
+      summary: 会话详情
+      operationId: getConversation
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Conversation'
+        '404':
+          description: 不存在（code=4040）
+    patch:
+      tags: [conversations]
+      summary: 改名或归档
+      operationId: updateConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, maxLength: 200 }
+                archived: { type: boolean }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    delete:
+      tags: [conversations]
+      summary: 归档（软删，不物理删除）
+      operationId: deleteConversation
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /api/v1/conversations/{id}/messages:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [conversations]
+      summary: 消息分页（倒序）
+      operationId: listMessages
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/PageData'
+                          - properties:
+                              items:
+                                type: array
+                                items:
+                                  $ref: '#/components/schemas/Message'
+    post:
+      tags: [conversations]
+      summary: 追加消息（autoRespond 为 true 时触发网关编排）
+      operationId: appendMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreate'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          userMessage: { $ref: '#/components/schemas/Message' }
+                          assistantMessage: { $ref: '#/components/schemas/Message' }
+                          usage: { $ref: '#/components/schemas/Usage' }
+
+  /api/v1/conversations/{id}/messages/{mid}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+      - name: mid
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      tags: [conversations]
+      summary: 删除单条消息
+      operationId: deleteMessage
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /api/v1/conversations/{id}/context:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [conversations]
+      summary: 取组装好的上下文（记忆注入 + 摘要压缩 + token 预算裁剪）
+      operationId: getConversationContext
+      parameters:
+        - name: budgetTokens
+          in: query
+          schema: { type: integer, default: 4000, minimum: 500, maximum: 32000 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          messages:
+                            type: array
+                            items: { $ref: '#/components/schemas/ChatMessage' }
+                          summary: { type: string, nullable: true }
+                          injectedMemories:
+                            type: array
+                            items: { $ref: '#/components/schemas/Memory' }
+                          estimatedTokens: { type: integer }
+                          truncated: { type: boolean }
+
+  /api/v1/conversations/{id}/summarize:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [conversations]
+      summary: 手动触发滚动摘要
+      operationId: summarizeConversation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                keepRecent: { type: integer, default: 10, minimum: 0, maximum: 100 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          summary: { type: string }
+                          summarizedMessages: { type: integer }
+                          usage: { $ref: '#/components/schemas/Usage' }
+
+  # ────────────────────────── memories ──────────────────────────
+  /api/v1/memories:
+    get:
+      tags: [memories]
+      summary: 长期记忆列表
+      operationId: listMemories
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: scope
+          in: query
+          schema: { type: string, enum: [global, conversation, dataset] }
+        - name: conversationId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: kind
+          in: query
+          schema: { type: string, enum: [fact, preference, insight] }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/PageData'
+                          - properties:
+                              items:
+                                type: array
+                                items: { $ref: '#/components/schemas/Memory' }
+    post:
+      tags: [memories]
+      summary: 手动写入记忆
+      operationId: createMemory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryCreate'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Memory'
+
+  /api/v1/memories/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    patch:
+      tags: [memories]
+      summary: 修改内容或权重
+      operationId: updateMemory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string, maxLength: 4000 }
+                weight: { type: number, minimum: 0, maximum: 10 }
+                expiresAt: { type: string, format: date-time, nullable: true }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    delete:
+      tags: [memories]
+      summary: 删除记忆
+      operationId: deleteMemory
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  # ────────────────────────── knowledge ──────────────────────────
+  /api/v1/knowledge-bases:
+    get:
+      tags: [knowledge]
+      summary: 知识库列表
+      operationId: listKnowledgeBases
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/PageData'
+                          - properties:
+                              items:
+                                type: array
+                                items: { $ref: '#/components/schemas/KnowledgeBase' }
+    post:
+      tags: [knowledge]
+      summary: 建库
+      operationId: createKnowledgeBase
+      x-privacy-capability: kb_ingest
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnowledgeBaseCreate'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/KnowledgeBase'
+        '403':
+          description: 当前档位为 strict，建库已阻断（code=4030）。建库即声明要入库内容，故与上传同档位。响应体见 components/responses/PrivacyBlocked。
+
+  /api/v1/knowledge-bases/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [knowledge]
+      summary: 知识库详情
+      operationId: getKnowledgeBase
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/KnowledgeBase'
+    patch:
+      tags: [knowledge]
+      summary: 改名或更换 embedding 模型（换模型后 needsReindex=true）
+      operationId: updateKnowledgeBase
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 200 }
+                description: { type: string, maxLength: 2000 }
+                embeddingModel: { type: string }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { type: string, format: uuid }
+                          needsReindex: { type: boolean }
+    delete:
+      tags: [knowledge]
+      summary: 软删知识库并清空对应 Chroma collection（纯 API 调用，不删目录）
+      operationId: deleteKnowledgeBase
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /api/v1/knowledge-bases/{id}/stats:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [knowledge]
+      summary: 知识库统计
+      operationId: getKnowledgeBaseStats
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          docCount: { type: integer }
+                          chunkCount: { type: integer }
+                          failedCount: { type: integer }
+                          avgChunkChars: { type: number }
+                          lastIngestedAt: { type: string, format: date-time, nullable: true }
+                          indexReady: { type: boolean }
+
+  /api/v1/knowledge-bases/{id}/documents:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [knowledge]
+      summary: 文档列表
+      operationId: listDocuments
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, parsing, chunking, embedding, ready, failed]
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/PageData'
+                          - properties:
+                              items:
+                                type: array
+                                items: { $ref: '#/components/schemas/KbDocument' }
+    post:
+      tags: [knowledge]
+      summary: 上传文档（pdf/docx/md/txt/csv）
+      operationId: uploadDocument
+      x-privacy-capability: kb_ingest
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: 已入队
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          documentId: { type: string, format: uuid }
+                          status: { type: string, enum: [queued] }
+        '403':
+          description: 当前档位为 strict，知识库入库已阻断（code=4030）
+
+  /api/v1/knowledge-bases/{id}/documents/{docId}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+      - name: docId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    delete:
+      tags: [knowledge]
+      summary: 删除文档及其分块与向量（软删）
+      operationId: deleteDocument
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /api/v1/knowledge-bases/{id}/documents/{docId}/chunks:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+      - name: docId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [knowledge]
+      summary: 分块预览
+      operationId: listChunks
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/PageData'
+                          - properties:
+                              items:
+                                type: array
+                                items: { $ref: '#/components/schemas/KbChunk' }
+
+  /api/v1/knowledge-bases/{id}/documents/{docId}/reprocess:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+      - name: docId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [knowledge]
+      summary: 重新切分并重新嵌入
+      operationId: reprocessDocument
+      x-privacy-capability: kb_ingest
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                chunkSize: { type: integer, minimum: 200, maximum: 4000 }
+                chunkOverlap: { type: integer, minimum: 0, maximum: 1000 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+        '403':
+          description: 当前档位为 strict，重新切分与嵌入已阻断（code=4030）
+
+  /api/v1/knowledge-bases/{id}/search:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [knowledge]
+      summary: 检索（vector / keyword / hybrid 三层漏斗）
+      operationId: searchKnowledgeBase
+      x-privacy-capability: kb_search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                query: { type: string, minLength: 1, maxLength: 2000 }
+                mode:
+                  type: string
+                  enum: [vector, keyword, hybrid]
+                  default: hybrid
+                topK: { type: integer, default: 5, minimum: 1, maximum: 20 }
+                rerank: { type: boolean, default: true }
+                minScore: { type: number, default: 0, minimum: 0, maximum: 1 }
+      responses:
+        '200':
+          description: |
+            成功。data.mode 为 hybrid_degraded 时表示请求了 hybrid 但向量侧不可用，
+            已在 FTS5 上完成，前端必须明示降级。
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          mode:
+                            type: string
+                            enum: [vector, keyword, hybrid, hybrid_degraded]
+                          items:
+                            type: array
+                            items: { $ref: '#/components/schemas/SearchHit' }
+                          latencyMs: { type: integer }
+        '409':
+          description: 索引未就绪（code=4091）或维度不匹配（code=4092）
+        '403':
+          description: |
+            当前档位为 strict，知识库检索已阻断（code=4030）。
+            检索会把命中分块送入 prompt，属于外传用户内容，故与入库同档位管控。
+
+  /api/v1/knowledge-bases/{id}/reindex:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [knowledge]
+      summary: 重建全库索引（逻辑重建，全程不删除文件）
+      operationId: reindexKnowledgeBase
+      x-privacy-capability: kb_ingest
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      responses:
+        '202':
+          description: 已接受
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          jobId: { type: string }
+                          status: { type: string, enum: [running] }
+        '403':
+          description: 当前档位为 strict，重建索引已阻断（code=4030）
+
+  /api/v1/knowledge-bases/{id}/queries/{queryId}/feedback:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+      - name: queryId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [knowledge]
+      summary: 检索效果反馈（知识自演化数据源）
+      operationId: feedbackQuery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wasUseful]
+              properties:
+                wasUseful: { type: boolean }
+                relevanceScore: { type: number, minimum: 0, maximum: 1 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  # ────────────────────────── datasets ──────────────────────────
+  /api/v1/datasets:
+    get:
+      tags: [datasets]
+      summary: 数据集元数据列表
+      operationId: listDatasets
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/PageData'
+                          - properties:
+                              items:
+                                type: array
+                                items: { $ref: '#/components/schemas/Dataset' }
+    post:
+      tags: [datasets]
+      summary: |
+        登记数据集元数据。只接受 schema / 行数 / sha256，
+        不接受原始行数据（隐私边界由接口签名强制）。
+        storageMode=server 仅在 privacy_mode=full 时被接受（请求体级闸门，
+        无法由路由级 dependency 覆盖，必须在 schema/service 层校验）。
+      operationId: registerDataset
+      x-privacy-capability: server_dataset_register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DatasetCreate'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Dataset'
+        '403':
+          description: storageMode=server 但档位不是 full（code=4030）。storageMode=local 在任何档位均被接受。
+
+  /api/v1/datasets/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [datasets]
+      summary: 数据集详情
+      operationId: getDataset
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/Dataset'
+    patch:
+      tags: [datasets]
+      summary: 改名或修改描述
+      operationId: updateDataset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 200 }
+                description: { type: string, maxLength: 2000 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    delete:
+      tags: [datasets]
+      summary: 软删元数据（浏览器明细不受影响）
+      operationId: deleteDataset
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /api/v1/datasets/{id}/upload:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [datasets]
+      summary: 上传明细到服务端 SQLite（仅 storageMode=server 且 privacy_mode 允许）
+      operationId: uploadDataset
+      x-privacy-capability: server_sql
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          id: { type: string, format: uuid }
+                          rowCount: { type: integer }
+                          serverTable: { type: string }
+        '403':
+          description: 档位不是 full，数据集明细上传已阻断（code=4030）
+
+  /api/v1/datasets/{id}/query:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [datasets]
+      summary: 服务端执行只读 SELECT（经 core/sql_guard.py 校验 + 行数上限）
+      operationId: queryDataset
+      x-privacy-capability: server_sql
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sql]
+              properties:
+                sql: { type: string, maxLength: 2000 }
+                limit: { type: integer, default: 5000, minimum: 1, maximum: 50000 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SqlResult'
+        '409':
+          description: 数据集不在服务端（code=4090），前端应改用 alasql
+        '403':
+          description: 档位不是 full，服务端 SQL 已阻断（code=4030）
+        '422':
+          description: SQL 未通过只读白名单（code=4000）
+
+  /api/v1/sql/validate:
+    post:
+      tags: [datasets]
+      summary: 只读白名单校验（与前端 src/sqlGuard.js 规则保持一致）
+      operationId: validateSql
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sql, schema]
+              properties:
+                sql: { type: string, maxLength: 2000 }
+                schema:
+                  type: object
+                  required: [columns]
+                  properties:
+                    tableName: { type: string }
+                    columns:
+                      type: array
+                      items:
+                        type: object
+                        required: [name]
+                        properties:
+                          name: { type: string }
+      responses:
+        '200':
+          description: 校验完成（ok=false 亦返回 200，属业务校验结果）
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          ok: { type: boolean }
+                          sql: { type: string, nullable: true }
+                          error: { type: string, nullable: true }
+
+  /api/v1/sql/generate:
+    post:
+      tags: [datasets]
+      summary: 自然语言转 SQL（走 text_to_sql 路由），返回前自动过 sql_guard
+      operationId: generateSql
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [schema, question]
+              properties:
+                datasetId: { type: string, format: uuid, nullable: true }
+                schema:
+                  type: object
+                  properties:
+                    tableName: { type: string }
+                    columns:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          name: { type: string }
+                          type: { type: string }
+                          semanticRole: { type: string }
+                question: { type: string, minLength: 1, maxLength: 1000 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          sql: { type: string }
+                          explanation: { type: string }
+                          chartHint:
+                            type: string
+                            enum: [bar, line, pie, table, none]
+                          guard:
+                            type: object
+                            properties:
+                              ok: { type: boolean }
+                              error: { type: string, nullable: true }
+
+  # ────────────────────────── schedules ──────────────────────────
+  /api/v1/schedules:
+    get:
+      tags: [schedules]
+      summary: 调度任务列表
+      operationId: listSchedules
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: enabled
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/PageData'
+                          - properties:
+                              items:
+                                type: array
+                                items: { $ref: '#/components/schemas/ScheduleJob' }
+    post:
+      tags: [schedules]
+      summary: 创建调度任务
+      operationId: createSchedule
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleJobCreate'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ScheduleJob'
+
+  /api/v1/schedules/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [schedules]
+      summary: 任务详情
+      operationId: getSchedule
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ScheduleJob'
+    patch:
+      tags: [schedules]
+      summary: 修改 cron / 参数 / 启停
+      operationId: updateSchedule
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 200 }
+                cron: { type: string, example: '0 9 * * 1' }
+                timezone: { type: string, default: Asia/Shanghai }
+                params: { type: object, additionalProperties: true }
+                enabled: { type: boolean }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ScheduleJob'
+    delete:
+      tags: [schedules]
+      summary: 软删并从调度器摘除 job
+      operationId: deleteSchedule
+      parameters:
+        - $ref: '#/components/parameters/LocalConfirm'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /api/v1/schedules/{id}/run:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [schedules]
+      summary: 立即试跑
+      operationId: runSchedule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wait: { type: boolean, default: false }
+      responses:
+        '202':
+          description: 已触发
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ScheduleRun'
+
+  /api/v1/schedules/{id}/runs:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    get:
+      tags: [schedules]
+      summary: 运行历史
+      operationId: listScheduleRuns
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/PageData'
+                          - properties:
+                              items:
+                                type: array
+                                items: { $ref: '#/components/schemas/ScheduleRun' }
+
+  /api/v1/schedules/{id}/runs/{runId}:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+      - name: runId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    get:
+      tags: [schedules]
+      summary: 单次运行详情
+      operationId: getScheduleRun
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ScheduleRun'
+
+  /api/v1/schedules/{id}/runs/{runId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+      - name: runId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [schedules]
+      summary: 取消运行
+      operationId: cancelScheduleRun
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ScheduleRun'
+
+  # ────────────────────────── notifications ──────────────────────────
+  /api/v1/notifications:
+    get:
+      tags: [notifications]
+      summary: 推送列表（前端 15s 轮询）
+      operationId: listNotifications
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: unreadOnly
+          in: query
+          schema: { type: boolean, default: true }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/PageData'
+                          - properties:
+                              items:
+                                type: array
+                                items: { $ref: '#/components/schemas/Notification' }
+
+  /api/v1/notifications/{id}/read:
+    parameters:
+      - $ref: '#/components/parameters/IdPath'
+    post:
+      tags: [notifications]
+      summary: 标记已读
+      operationId: readNotification
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /api/v1/notifications/read-all:
+    post:
+      tags: [notifications]
+      summary: 全部标记已读
+      operationId: readAllNotifications
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          updated: { type: integer }
+
+  /api/v1/notifications/stream:
+    get:
+      tags: [notifications]
+      summary: SSE 实时推送（可选，替代轮询）
+      operationId: streamNotifications
+      responses:
+        '200':
+          description: text/event-stream，事件名 notification / heartbeat
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  # ────────────────────────── db-proxy ──────────────────────────
+  /api/v1/db-proxy/test:
+    post:
+      tags: [db-proxy]
+      summary: 外部数据库连通性测试
+      operationId: testExternalDb
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DbProxyRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          ok: { type: boolean }
+                          serverVersion: { type: string, nullable: true }
+                          error: { type: string, nullable: true }
+
+  /api/v1/db-proxy/query:
+    post:
+      tags: [db-proxy]
+      summary: |
+        执行只读 SELECT。字段名与旧 server/db-proxy.mjs 的 POST /query 保持一致，
+        前端只需把 baseURL 从 http://localhost:3001 换成 /api/v1/db-proxy。
+        新增：强制过 core/sql_guard.py；凭证只用于本次查询，不落盘。
+      operationId: queryExternalDb
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/DbProxyRequest'
+                - type: object
+                  required: [sql]
+                  properties:
+                    sql: { type: string, maxLength: 2000 }
+                    limit: { type: integer, default: 5000, minimum: 1, maximum: 50000 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SqlResult'
+        '422':
+          description: SQL 未通过只读白名单
+
+components:
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: 资源 UUID
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, default: 1, minimum: 1 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, default: 20, minimum: 1, maximum: 200 }
+    LocalConfirm:
+      name: X-Local-Confirm
+      in: header
+      required: true
+      schema: { type: string, enum: ['true'] }
+      description: 写密钥或不可逆操作需携带。缺失时返回 403 且 code=4010。
+
+  responses:
+    PrivacyBlocked:
+      description: |
+        隐私档位阻断（code=4030）。与 4010（缺少确认头）严格区分：
+        4010 补上 X-Local-Confirm 重试即可，4030 补头无效，前端必须引导用户切换档位，
+        且禁止自动重试。
+        受管端点与各档位判定详见 docs/02-架构.md §7.4.1 闸门矩阵。
+        触发端点（8 个）：建库、文档上传、重新切分与嵌入、知识库检索、重建索引、
+        数据集以 storageMode=server 注册、数据集明细上传、服务端 SQL 查询。
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ApiResponse'
+              - type: object
+                properties:
+                  code: { type: integer, example: 4030 }
+                  data: { $ref: '#/components/schemas/PrivacyBlockedData' }
+          example:
+            code: 4030
+            data:
+              current_mode: strict
+              required_modes: [standard, full]
+              capability: kb_ingest
+              setting_path: /api/v1/settings/privacy-mode
+              blocked_by_downgrade:
+                server_datasets: 0
+                knowledge_bases: 0
+                kb_documents: 0
+            message: 当前隐私档位为 strict，知识库入库已停用。切换到 standard 或 full 档后可继续。
+
+  schemas:
+
+    ApiResponse:
+      type: object
+      required: [code, data, message]
+      properties:
+        code:
+          type: integer
+          description: 0 表示成功；非 0 见 docs/02-架构.md §6.8 业务错误码
+          example: 0
+        data:
+          nullable: true
+        message:
+          type: string
+          default: ''
+
+    PageData:
+      type: object
+      required: [items, total, page, limit, hasMore]
+      properties:
+        items:
+          type: array
+          items: {}
+        total: { type: integer }
+        page: { type: integer }
+        limit: { type: integer }
+        hasMore: { type: boolean }
+
+    PageResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+
+    HealthData:
+      type: object
+      properties:
+        status: { type: string, enum: [ok, degraded] }
+        version: { type: string }
+        subsystems:
+          type: object
+          properties:
+            db: { type: boolean }
+            vector: { type: boolean }
+            scheduler: { type: boolean }
+            llm_configured: { type: boolean }
+        capabilities:
+          $ref: '#/components/schemas/Capabilities'
+
+    Capabilities:
+      type: object
+      description: |
+        前端降级开关的唯一来源。每个字段必须由 PrivacyPolicy 与真实探测结果共同派生，
+        不得硬编码，也不得与 API 层闸门（code=4030）判断逻辑分叉。
+        派生规则：
+          rag               = 向量库可用 AND privacy_mode != strict
+          semantic_search   = embedding 服务可用 AND privacy_mode != strict
+          embeddings_available = embedding 服务可用（与档位无关，供设置页探测展示）
+          server_sql        = 数据集注册能力可用 AND privacy_mode == full
+      properties:
+        rag: { type: boolean, description: 向量库可用（chromadb 导入并初始化成功）且档位允许知识库 }
+        semantic_search: { type: boolean, description: embedding 服务可用且档位允许知识库检索 }
+        embeddings_available: { type: boolean, description: 仅反映探测结果，不含档位判断 }
+        server_sql: { type: boolean, description: 仅 privacy_mode=full 时为 true }
+        privacy_mode:
+          type: string
+          enum: [strict, standard, full]
+          default: strict
+
+    PrivacyMode:
+      type: string
+      enum: [strict, standard, full]
+      default: strict
+      description: |
+        strict   — 后端只做 LLM 代理 + 会话/记忆元数据；知识库入库与检索、服务端数据集 SQL 全部阻断。
+        standard — 额外允许 RAG 知识库（建库/上传/重建索引/检索）。
+        full     — 额外允许数据集明细上传到服务端执行只读 SQL。
+
+    PrivacyModeStatus:
+      type: object
+      properties:
+        privacy_mode: { $ref: '#/components/schemas/PrivacyMode' }
+        effective_grants:
+          type: object
+          description: 当前档位实际放行的能力（前端据此渲染，不自行推断）
+          properties:
+            llm_proxy: { type: boolean }
+            conversation_persistence: { type: boolean }
+            kb_ingest: { type: boolean, description: 知识库建库/上传/重建索引 }
+            kb_search: { type: boolean }
+            server_sql: { type: boolean }
+            external_db_proxy: { type: boolean, description: 所有档位均为 true，见 docs/02-架构.md §7.4 }
+        blocked_by_downgrade:
+          type: object
+          description: |
+            因当前档位而被阻断访问的既有数据计数。
+            降级不删除数据（本机安全策略禁止删除），仅在此如实暴露，供 UI 提示用户
+            「你有 N 个数据集/N 个知识库在当前档位下不可用」。
+          properties:
+            server_datasets: { type: integer }
+            knowledge_bases: { type: integer }
+            kb_documents: { type: integer }
+        updated_at: { type: string, format: date-time, nullable: true }
+
+    PrivacyModeUpdate:
+      type: object
+      required: [privacy_mode]
+      properties:
+        privacy_mode: { $ref: '#/components/schemas/PrivacyMode' }
+
+    PrivacyBlockedData:
+      type: object
+      description: |
+        code=4030（隐私档位阻断）的 data 载荷，8 个受控端点共用同一形状。
+        由 core/privacy.py 的 PrivacyPolicy 直接生成 —— 与闸门判定、capabilities 派生
+        同源，故三者不可能漂移（这是"一个策略对象、三类消费点"的直接收益）。
+        前端应完全依据本载荷渲染引导文案，不得硬编码档位到文案的映射表。
+      required: [current_mode, required_modes, capability, setting_path, blocked_by_downgrade]
+      properties:
+        current_mode: { $ref: '#/components/schemas/PrivacyMode' }
+        required_modes:
+          type: array
+          description: |
+            可放行该操作的全部档位集合（非仅最小档位）。
+            给集合而非最小值，是为了让 UI 直接渲染「需要 standard 或 full 档」，
+            且不必知道档位的偏序关系。
+          items: { $ref: '#/components/schemas/PrivacyMode' }
+          example: [standard, full]
+        capability:
+          type: string
+          description: 机器可读的能力键，供前端映射文案模板
+          enum: [kb_ingest, kb_search, server_dataset_register, server_sql]
+        setting_path:
+          type: string
+          description: 切换档位的端点路径。前端据此生成跳转链接，不要硬编码。
+          example: /api/v1/settings/privacy-mode
+        blocked_by_downgrade:
+          type: object
+          description: |
+            仅统计因当前档位而不可访问的既有数据（降级不删除数据，故这些计数
+            会持续存在直到用户切回上档位）。无被阻断数据时各字段为 0，
+            但字段始终存在 —— 便于前端免去 undefined 判断。
+          required: [server_datasets, knowledge_bases, kb_documents]
+          properties:
+            server_datasets: { type: integer, example: 0 }
+            knowledge_bases: { type: integer, example: 0 }
+            kb_documents: { type: integer, example: 0 }
+
+    TaskKey:
+      type: string
+      enum: [plan_analysis, narrate_insights, parse_question, text_to_sql, memory_summarize, chunk_enrich, report_narrate]
+
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role: { type: string, enum: [system, user, assistant, tool] }
+        content: { type: string }
+
+    LlmChatRequest:
+      type: object
+      required: [taskKey, messages]
+      properties:
+        taskKey: { $ref: '#/components/schemas/TaskKey' }
+        messages:
+          type: array
+          items: { $ref: '#/components/schemas/ChatMessage' }
+        responseFormat:
+          type: object
+          nullable: true
+          properties:
+            type: { type: string, enum: [json_object, text] }
+        temperature: { type: number, default: 0.2, minimum: 0, maximum: 2 }
+        timeoutMs: { type: integer, default: 15000, minimum: 1000, maximum: 300000 }
+        conversationId: { type: string, format: uuid, nullable: true }
+
+    Usage:
+      type: object
+      properties:
+        promptTokens: { type: integer, nullable: true, description: null 表示上游未返回，与 0 语义不同 }
+        completionTokens: { type: integer, nullable: true }
+        totalTokens: { type: integer, nullable: true }
+
+    LlmChatResult:
+      type: object
+      properties:
+        content: { type: string }
+        mode: { type: string, enum: [llm, mock] }
+        providerId: { type: string, format: uuid, nullable: true }
+        model: { type: string, nullable: true }
+        usage: { $ref: '#/components/schemas/Usage' }
+        latencyMs: { type: integer }
+
+    EmbeddingsRequest:
+      type: object
+      required: [input]
+      properties:
+        providerId: { type: string, format: uuid, nullable: true }
+        model: { type: string, nullable: true }
+        input:
+          type: array
+          items: { type: string }
+          maxItems: 128
+
+    EmbeddingsResult:
+      type: object
+      properties:
+        embeddings:
+          type: array
+          items:
+            type: array
+            items: { type: number }
+        model: { type: string }
+        dim: { type: integer }
+        usage: { $ref: '#/components/schemas/Usage' }
+
+    ProviderView:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        baseUrl: { type: string, format: uri }
+        model: { type: string }
+        apiKeyHint: { type: string, description: 仅掩码，永不返回明文 }
+        isActive: { type: boolean }
+        embeddingsSupported: { type: boolean, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    ProviderCreate:
+      type: object
+      required: [name, baseUrl, apiKey, model]
+      properties:
+        name: { type: string, maxLength: 100 }
+        baseUrl: { type: string, format: uri, example: 'https://api.deepseek.com' }
+        apiKey: { type: string, minLength: 8 }
+        model: { type: string, example: 'deepseek-chat' }
+
+    ProviderUpdate:
+      type: object
+      properties:
+        name: { type: string, maxLength: 100 }
+        baseUrl: { type: string, format: uri }
+        apiKey: { type: string, minLength: 8, description: 省略则不改 }
+        model: { type: string }
+        isActive: { type: boolean }
+
+    ProbeResult:
+      type: object
+      properties:
+        ok: { type: boolean }
+        latencyMs: { type: integer }
+        error: { type: string, nullable: true }
+
+    LlmRoute:
+      type: object
+      required: [taskKey, primaryProviderId, primaryModel]
+      properties:
+        taskKey: { $ref: '#/components/schemas/TaskKey' }
+        primaryProviderId: { type: string, format: uuid }
+        primaryModel: { type: string }
+        fallback:
+          type: array
+          items:
+            type: object
+            properties:
+              providerId: { type: string, format: uuid }
+              model: { type: string }
+
+    UsageItem:
+      type: object
+      properties:
+        key: { type: string }
+        promptTokens: { type: integer }
+        completionTokens: { type: integer }
+        totalTokens: { type: integer }
+        calls: { type: integer }
+
+    LlmCallLog:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        taskKey: { $ref: '#/components/schemas/TaskKey' }
+        providerId: { type: string, format: uuid }
+        model: { type: string }
+        status: { type: string, enum: [ok, error] }
+        promptTokens: { type: integer, nullable: true }
+        completionTokens: { type: integer, nullable: true }
+        latencyMs: { type: integer }
+        errorCode: { type: string, nullable: true }
+        errorMessage: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    Conversation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        summary: { type: string, nullable: true }
+        messageCount: { type: integer }
+        datasetId: { type: string, format: uuid, nullable: true }
+        knowledgeBaseId: { type: string, format: uuid, nullable: true }
+        archivedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    Message:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        conversationId: { type: string, format: uuid }
+        role: { type: string, enum: [user, assistant, system, tool] }
+        content: { type: string }
+        toolName: { type: string, nullable: true }
+        toolPayload:
+          type: object
+          nullable: true
+          additionalProperties: true
+        tokens: { type: integer, nullable: true }
+        llmCallId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    MessageCreate:
+      type: object
+      required: [role, content]
+      properties:
+        role: { type: string, enum: [user, assistant, system, tool] }
+        content: { type: string, minLength: 1, maxLength: 200000 }
+        toolName: { type: string, nullable: true }
+        toolPayload: { type: object, nullable: true, additionalProperties: true }
+        autoRespond: { type: boolean, default: false }
+
+    Memory:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        scope: { type: string, enum: [global, conversation, dataset] }
+        conversationId: { type: string, format: uuid, nullable: true }
+        datasetId: { type: string, format: uuid, nullable: true }
+        kind: { type: string, enum: [fact, preference, insight] }
+        content: { type: string }
+        weight: { type: number }
+        sourceMessageId: { type: string, format: uuid, nullable: true }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    MemoryCreate:
+      type: object
+      required: [scope, kind, content]
+      properties:
+        scope: { type: string, enum: [global, conversation, dataset] }
+        conversationId: { type: string, format: uuid, nullable: true }
+        datasetId: { type: string, format: uuid, nullable: true }
+        kind: { type: string, enum: [fact, preference, insight] }
+        content: { type: string, minLength: 1, maxLength: 4000 }
+        weight: { type: number, default: 1, minimum: 0, maximum: 10 }
+
+    KnowledgeBase:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        embeddingProviderId: { type: string, format: uuid }
+        embeddingModel: { type: string }
+        embeddingDim: { type: integer, nullable: true }
+        collectionName:
+          type: string
+          description: 命名规则 kb_{uuid}，长度 3-63，首尾为小写字母或数字
+          example: 'kb_3f2a1b4c-5d6e-4f70-8a91-b2c3d4e5f607'
+        docCount: { type: integer }
+        chunkCount: { type: integer }
+        indexStatus: { type: string, enum: [empty, building, ready, failed] }
+        needsReindex: { type: boolean }
+        createdAt: { type: string, format: date-time }
+
+    KnowledgeBaseCreate:
+      type: object
+      required: [name, embeddingProviderId, embeddingModel]
+      properties:
+        name: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 2000 }
+        embeddingProviderId: { type: string, format: uuid }
+        embeddingModel: { type: string, example: 'text-embedding-3-small' }
+
+    KbDocument:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        kbId: { type: string, format: uuid }
+        filename: { type: string, description: 原始文件名（可能含中文）；物理文件名 uuid 化 }
+        mime: { type: string }
+        sizeBytes: { type: integer }
+        sha256: { type: string }
+        status: { type: string, enum: [pending, parsing, chunking, embedding, ready, failed] }
+        error: { type: string, nullable: true }
+        chunkCount: { type: integer }
+        pageCount: { type: integer, nullable: true }
+        charCount: { type: integer, nullable: true }
+        ingestedMode:
+          $ref: '#/components/schemas/IngestedMode'
+        ingestedAt:
+          type: string
+          format: date-time
+          description: 最近一次入库（含 reprocess / reindex 重新嵌入）的时间
+        egressAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            该文档内容**实际离开本机**的时间；NULL 表示从未离开。
+            **这是"仅看已出本机"筛选器的唯一判定依据**（谓词 egress_at IS NOT NULL），
+            不是 ingestedMode —— 理由见 docs/02-架构.md §7.5。
+            该标记**一旦置位永不复位**（数据无法撤回），且会在两种情况下置位：
+            ① 分块文本被发往上游 embedding 接口；② 分块文本被检索命中并注入 prompt。
+        egressChannel:
+          type: string
+          nullable: true
+          enum: [embedding, retrieval, both]
+          description: 首次离开本机的通道；与 egressAt 同时置位。供 UI 说明"为什么会出本机"
+        embeddingSent:
+          type: boolean
+          description: |
+            分块文本是否**曾经**被实际发送到上游 embedding 接口。
+            当 provider 不支持 /v1/embeddings 而降级为关键词检索时为 false ——
+            此时 ingestedMode 仍是 standard/full，但内容并未离开本机。
+            同 egressAt，一经置 true 永不复位。
+        createdAt: { type: string, format: date-time }
+
+    IngestedMode:
+      type: string
+      enum: [standard, full]
+      description: |
+        该文档最近一次入库时所处的隐私档位，作为"谁授权其入库"的凭据。
+        **不包含 strict** —— 因为 strict 档下入库能力已被闸门阻断（见 §7.4.1），
+        系统内不可能存在 strict 入库的文档。这是一条可断言的不变量。
+        **不可用当前档位替代**：用户可能在 standard 上传后切到 full，
+        用当前档位标注会把未出本机的文档错标为已出本机（或反向漏标）。
+
+    KbChunk:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        docId: { type: string, format: uuid }
+        kbId: { type: string, format: uuid }
+        seq: { type: integer }
+        content: { type: string }
+        charLen: { type: integer }
+        tokenEst: { type: integer }
+        meta:
+          type: object
+          additionalProperties: true
+          description: '{doc_id, doc_name, seq, page, section, char_len}'
+
+    SearchHit:
+      type: object
+      properties:
+        chunkId: { type: string, format: uuid }
+        documentId: { type: string, format: uuid }
+        content: { type: string }
+        score: { type: number }
+        meta: { type: object, additionalProperties: true }
+        highlights:
+          type: array
+          items: { type: string }
+
+    DatasetColumn:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        type: { type: string, enum: [string, number, integer, boolean, date, datetime, unknown] }
+        semanticRole: { type: string, description: '如 measure / dimension / time / id' }
+
+    DatasetSchema:
+      type: object
+      properties:
+        tableName: { type: string }
+        columns:
+          type: array
+          items: { $ref: '#/components/schemas/DatasetColumn' }
+
+    Dataset:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        sourceType: { type: string, enum: [file, api, db] }
+        storageMode: { type: string, enum: [local, server] }
+        serverTable: { type: string, nullable: true }
+        rowCount: { type: integer }
+        columnCount: { type: integer }
+        schema: { $ref: '#/components/schemas/DatasetSchema' }
+        sha256: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    DatasetCreate:
+      type: object
+      required: [name, sourceType, schema, rowCount]
+      properties:
+        name: { type: string, maxLength: 200 }
+        description: { type: string, maxLength: 2000 }
+        sourceType: { type: string, enum: [file, api, db] }
+        schema: { $ref: '#/components/schemas/DatasetSchema' }
+        rowCount: { type: integer, minimum: 0 }
+        sha256: { type: string, nullable: true }
+        storageMode:
+          type: string
+          enum: [local, server]
+          default: local
+          description: local 表示明细只在浏览器 IndexedDB，后端无 /query 能力
+
+    SqlResult:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+        rows:
+          type: array
+          items: { type: object, additionalProperties: true }
+        truncated: { type: boolean }
+        execMs: { type: integer }
+        sql: { type: string }
+
+    ScheduleJob:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        jobType: { type: string, enum: [report, dataset_refresh, query_push] }
+        datasetId: { type: string, format: uuid, nullable: true }
+        knowledgeBaseId: { type: string, format: uuid, nullable: true }
+        cron: { type: string, example: '0 9 * * 1' }
+        timezone: { type: string, default: Asia/Shanghai }
+        params: { type: object, additionalProperties: true }
+        enabled: { type: boolean }
+        lastRunAt: { type: string, format: date-time, nullable: true }
+        nextRunAt: { type: string, format: date-time, nullable: true }
+        lastStatus: { type: string, nullable: true, enum: [success, failed, running, pending] }
+        createdAt: { type: string, format: date-time }
+
+    ScheduleJobCreate:
+      type: object
+      required: [name, jobType, cron]
+      properties:
+        name: { type: string, maxLength: 200 }
+        jobType: { type: string, enum: [report, dataset_refresh, query_push] }
+        datasetId: { type: string, format: uuid, nullable: true }
+        knowledgeBaseId: { type: string, format: uuid, nullable: true }
+        cron: { type: string, description: '5 段标准 cron：分 时 日 月 周' }
+        timezone: { type: string, default: Asia/Shanghai }
+        params: { type: object, additionalProperties: true }
+
+    ScheduleRun:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        jobId: { type: string, format: uuid }
+        status: { type: string, enum: [pending, running, success, failed, cancelled] }
+        trigger: { type: string, enum: [cron, manual] }
+        startedAt: { type: string, format: date-time, nullable: true }
+        finishedAt: { type: string, format: date-time, nullable: true }
+        durationMs: { type: integer, nullable: true }
+        result: { type: object, nullable: true, additionalProperties: true }
+        error: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    Notification:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        jobId: { type: string, format: uuid, nullable: true }
+        runId: { type: string, format: uuid, nullable: true }
+        level: { type: string, enum: [info, success, warning, error] }
+        title: { type: string }
+        body: { type: string }
+        readAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+
+    DbProxyRequest:
+      type: object
+      required: [type, connection]
+      properties:
+        type: { type: string, enum: [mysql, postgres] }
+        connection:
+          type: object
+          description: 凭证只用于本次查询，不落盘、不入日志
+          required: [host, user, database]
+          properties:
+            host: { type: string, default: 127.0.0.1 }
+            port: { type: integer }
+            user: { type: string }
+            password: { type: string, format: password }
+            database: { type: string }
