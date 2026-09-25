@@ -81,7 +81,7 @@ export default function ChartToolbox({ table, onGenerate, onClose }) {
 
   const submit = () => {
     if ((kind === 'trend' || kind === 'momYoy') && !effectiveMeasure) {
-      alert('当前数据集未检测到可用度量列（数值列），请使用 AI 生成或相关性图。')
+      alert('当前数据集未检测到可用度量列（数值列），请使用相关性图或手动生成。')
       return
     }
     if (kind === 'pivot') {
@@ -133,7 +133,7 @@ export default function ChartToolbox({ table, onGenerate, onClose }) {
           <button className="icon-btn" onClick={onClose}><X size={18} /></button>
         </div>
         <div className="toolbox-tabs">
-          <button type="button" className={`toolbox-tab ${kind === 'auto' ? 'active' : ''}`} onClick={() => setKind('auto')}><Wand2 size={15} /> 智能推荐</button>
+          <button type="button" className={`toolbox-tab ${kind === 'auto' ? 'active' : ''}`} onClick={() => setKind('auto')}><Wand2 size={15} /> 图表推荐</button>
           <button type="button" className={`toolbox-tab ${kind === 'trend' ? 'active' : ''}`} onClick={() => setKind('trend')}><TrendingUp size={15} /> 时间趋势</button>
           <button type="button" className={`toolbox-tab ${kind === 'topN' ? 'active' : ''}`} onClick={() => setKind('topN')}><ListOrdered size={15} /> Top N 排行</button>
           <button type="button" className={`toolbox-tab ${kind === 'momYoy' ? 'active' : ''}`} onClick={() => setKind('momYoy')}><Percent size={15} /> 同环比</button>
@@ -186,7 +186,7 @@ export default function ChartToolbox({ table, onGenerate, onClose }) {
               <option value="">{timeCols[0] ? `自动（${timeCols[0]}）` : '请选择'}</option>
               {timeCols.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <label className="toolbox-label">度量列{numericCols.length === 0 && <span style={{color:'#d35400', marginLeft:6}}>（无可用量度列）</span>}</label>
+            <label className="toolbox-label">度量列{numericCols.length === 0 && <span style={{color:'var(--warn)', marginLeft:6}}>（无可用量度列）</span>}</label>
             <select value={measureCol} onChange={e => setMeasureCol(e.target.value)} disabled={numericCols.length === 0}>
               <option value="">{numericCols[0] ? `自动（${numericCols[0]}）` : '请选择'}</option>
               {numericCols.map(c => <option key={c} value={c}>{c}</option>)}
@@ -207,12 +207,12 @@ export default function ChartToolbox({ table, onGenerate, onClose }) {
           </div>
         ) : kind === 'topN' ? (
           <div className="toolbox-form">
-            <label className="toolbox-label">维度列{dimCandidates.length === 0 && <span style={{color:'#d35400', marginLeft:6}}>（无可用维度列）</span>}</label>
+            <label className="toolbox-label">维度列{dimCandidates.length === 0 && <span style={{color:'var(--warn)', marginLeft:6}}>（无可用维度列）</span>}</label>
             <select value={dimCol} onChange={e => setDimCol(e.target.value)} disabled={dimCandidates.length === 0}>
               <option value="">请选择</option>
               {dimCandidates.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <label className="toolbox-label">度量列{numericCols.length === 0 && <span style={{color:'#d35400', marginLeft:6}}>（无可用量度列）</span>}</label>
+            <label className="toolbox-label">度量列{numericCols.length === 0 && <span style={{color:'var(--warn)', marginLeft:6}}>（无可用量度列）</span>}</label>
             <select value={measureCol} onChange={e => setMeasureCol(e.target.value)} disabled={numericCols.length === 0}>
               <option value="">{numericCols[0] ? `自动（${numericCols[0]}）` : '请选择'}</option>
               {numericCols.map(c => <option key={c} value={c}>{c}</option>)}
@@ -227,17 +227,17 @@ export default function ChartToolbox({ table, onGenerate, onClose }) {
           </div>
         ) : kind === 'pivot' ? (
           <div className="toolbox-form">
-            <label className="toolbox-label">行维度（分组行）{dimCandidates.length === 0 && <span style={{color:'#d35400', marginLeft:6}}>（无可用维度列）</span>}</label>
+            <label className="toolbox-label">行维度（分组行）{dimCandidates.length === 0 && <span style={{color:'var(--warn)', marginLeft:6}}>（无可用维度列）</span>}</label>
             <select value={rowDim} onChange={e => setRowDim(e.target.value)} disabled={dimCandidates.length === 0}>
               <option value="">请选择</option>
               {dimCandidates.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <label className="toolbox-label">列维度（交叉列）{dimCandidates.length === 0 && <span style={{color:'#d35400', marginLeft:6}}>（无可用维度列）</span>}</label>
+            <label className="toolbox-label">列维度（交叉列）{dimCandidates.length === 0 && <span style={{color:'var(--warn)', marginLeft:6}}>（无可用维度列）</span>}</label>
             <select value={colDim} onChange={e => setColDim(e.target.value)} disabled={dimCandidates.length === 0}>
               <option value="">请选择</option>
               {dimCandidates.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <label className="toolbox-label">度量列（聚合值）{numericCols.length === 0 && <span style={{color:'#d35400', marginLeft:6}}>（无可用量度列）</span>}</label>
+            <label className="toolbox-label">度量列（聚合值）{numericCols.length === 0 && <span style={{color:'var(--warn)', marginLeft:6}}>（无可用量度列）</span>}</label>
             <select value={measureCol} onChange={e => setMeasureCol(e.target.value)} disabled={numericCols.length === 0}>
               <option value="">{numericCols[0] ? `自动（${numericCols[0]}）` : '请选择'}</option>
               {numericCols.map(c => <option key={c} value={c}>{c}</option>)}
@@ -265,7 +265,7 @@ export default function ChartToolbox({ table, onGenerate, onClose }) {
               <option value="">{timeCols[0] ? `自动（${timeCols[0]}）` : '请选择'}</option>
               {timeCols.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <label className="toolbox-label">度量列{numericCols.length === 0 && <span style={{color:'#d35400', marginLeft:6}}>（无可用量度列）</span>}</label>
+            <label className="toolbox-label">度量列{numericCols.length === 0 && <span style={{color:'var(--warn)', marginLeft:6}}>（无可用量度列）</span>}</label>
             <select value={measureCol} onChange={e => setMeasureCol(e.target.value)} disabled={numericCols.length === 0}>
               <option value="">{numericCols[0] ? `自动（${numericCols[0]}）` : '请选择'}</option>
               {numericCols.map(c => <option key={c} value={c}>{c}</option>)}
@@ -293,7 +293,7 @@ export default function ChartToolbox({ table, onGenerate, onClose }) {
               <option value="">{timeCols[0] ? `自动（${timeCols[0]}）` : '请选择'}</option>
               {timeCols.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <label className="toolbox-label">度量列{numericCols.length === 0 && <span style={{color:'#d35400', marginLeft:6}}>（无可用量度列）</span>}</label>
+            <label className="toolbox-label">度量列{numericCols.length === 0 && <span style={{color:'var(--warn)', marginLeft:6}}>（无可用量度列）</span>}</label>
             <select value={measureCol} onChange={e => setMeasureCol(e.target.value)} disabled={numericCols.length === 0}>
               <option value="">{numericCols[0] ? `自动（${numericCols[0]}）` : '请选择'}</option>
               {numericCols.map(c => <option key={c} value={c}>{c}</option>)}
@@ -316,12 +316,12 @@ export default function ChartToolbox({ table, onGenerate, onClose }) {
           </div>
         ) : kind === 'map' ? (
           <div className="toolbox-form">
-            <label className="toolbox-label">地区维度列（省/市名）{regionCandidates.length === 0 && <span style={{color:'#d35400', marginLeft:6}}>（无合适的地区列）</span>}</label>
+            <label className="toolbox-label">地区维度列（省/市名）{regionCandidates.length === 0 && <span style={{color:'var(--warn)', marginLeft:6}}>（无合适的地区列）</span>}</label>
             <select value={regionCol} onChange={e => setRegionCol(e.target.value)} disabled={regionCandidates.length === 0}>
               <option value="">请选择</option>
               {regionCandidates.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
-            <label className="toolbox-label">度量列（着色值）{numericCols.length === 0 && <span style={{color:'#d35400', marginLeft:6}}>（无可用量度列）</span>}</label>
+            <label className="toolbox-label">度量列（着色值）{numericCols.length === 0 && <span style={{color:'var(--warn)', marginLeft:6}}>（无可用量度列）</span>}</label>
             <select value={measureCol} onChange={e => setMeasureCol(e.target.value)} disabled={numericCols.length === 0}>
               <option value="">{numericCols[0] ? `自动（${numericCols[0]}）` : '请选择'}</option>
               {numericCols.map(c => <option key={c} value={c}>{c}</option>)}

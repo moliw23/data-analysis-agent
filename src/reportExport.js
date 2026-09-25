@@ -16,8 +16,31 @@ const ICON_SVG = {
   file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'
 }
 
+// 报告是独立产物（HTML/Word/PPTX），无法引用应用的 CSS 变量；
+// 因此在**导出时刻**从 design-tokens.css 解析具体色值，保证报告与应用同一套颜色
+// （此前报告主色还是旧版紫色，与界面墨绿脱节）。fallback 仅作非浏览器环境兜底。
+function tok(name, fallback) {
+  try {
+    if (typeof document !== 'undefined' && window.getComputedStyle) {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+      if (v) return v
+    }
+  } catch { /* 非浏览器环境走 fallback */ }
+  return fallback
+}
+const RT = () => ({
+  accent: tok('--accent-600', '#15795B'),
+  fg: tok('--fg', '#27272A'),
+  muted: tok('--muted', '#71717A'),
+  border: tok('--border', '#E7E5E2'),
+  surface2: tok('--n-100', '#F4F4F2'),
+  danger: tok('--danger', '#B23A31'),
+  warn: tok('--warn', '#96631A'),
+  n400: tok('--n-400', '#A6A39C'),
+})
+
 // SVG 字符串 → PNG dataURL（Word 等不支持 SVG 的场景用）
-function svgToPngDataURL(svgString, size = 32, color = '#8B7EC8') {
+function svgToPngDataURL(svgString, size = 32, color = tok('--accent-600', '#15795B')) {
   return new Promise((resolve, reject) => {
     // 替换 stroke 颜色为传入色
     const svg = svgString.replace(/stroke="[^"]*"/g, `stroke="${color}"`)
@@ -66,7 +89,7 @@ export async function chartsToPNGs(charts, width = 720, height = 340) {
 function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 
 // 严重程度 → 小色点 PNG（Word 用，模仿原 HTML 中的彩色圆点）
-function sevColor(sev) { return sev === 'high' ? '#C0564B' : sev === 'medium' ? '#C98A2B' : sev === 'info' ? '#9AA0A6' : '#8B7EC8' }
+function sevColor(sev) { const T = RT(); return sev === 'high' ? T.danger : sev === 'medium' ? T.warn : sev === 'info' ? T.n400 : T.accent }
 function sevLabel(sev) { return sev === 'high' ? '高' : sev === 'medium' ? '中' : sev === 'info' ? '提示' : '低' }
 function dotDataURL(color, size = 10) {
   const c = document.createElement('canvas'); c.width = c.height = size
@@ -79,7 +102,7 @@ function dotDataURL(color, size = 10) {
 async function buildIconPNGs() {
   const out = {}
   for (const [name, path] of Object.entries(ICON_SVG)) {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8B7EC8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="${tok('--accent-600', '#15795B')}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`
     try { out[name] = await svgToPngDataURL(svg, 32) }
     catch { out[name] = '' }
   }
@@ -94,7 +117,7 @@ export async function exportWord(table, analysis, quality, fileName) {
     const iconSrc = iconPng[i.icon] || iconPng.summary || ''
     return `<p style="margin:6pt 0;display:flex;align-items:flex-start;gap:4pt">
       ${iconSrc ? `<img src="${iconSrc}" width="14" height="14" style="flex-shrink:0;margin-top:3pt"/>` : ''}
-      <span><b>${esc(i.text)}</b><br><span style="color:#6B6577;font-size:9pt">${esc(i.caliber || '')}</span></span>
+      <span><b>${esc(i.text)}</b><br><span style="color:${tok('--muted', '#71717A')};font-size:9pt">${esc(i.caliber || '')}</span></span>
     </p>`
   }).join('')
   const issueHtml = quality.issues.length
@@ -111,12 +134,12 @@ export async function exportWord(table, analysis, quality, fileName) {
       <p style="font-weight:bold;margin:0 0 4pt">${esc(p.title)}</p>
       <img src="${p.png}" width="640" />
       ${p.insight ? `<p style="font-size:10pt;margin:4pt 0">${esc(p.insight)}</p>` : ''}
-      ${p.caliber ? `<p style="color:#6B6577;font-size:9pt;margin:2pt 0">${esc(p.caliber)}</p>` : ''}
+      ${p.caliber ? `<p style="color:${tok('--muted', '#71717A')};font-size:9pt;margin:2pt 0">${esc(p.caliber)}</p>` : ''}
     </div>`).join('')
-  const head = table.columns.map(c => `<th style="border:1px solid #E8E5F0;padding:4pt 6pt;background:#F3F1F8">${esc(c.name)}</th>`).join('')
-  const sample = table.rows.slice(0, 8).map(r => `<tr>${table.columns.map(c => `<td style="border:1px solid #E8E5F0;padding:4pt 6pt">${esc(r[c.name])}</td>`).join('')}</tr>`).join('')
+  const head = table.columns.map(c => `<th style="border:1px solid ${tok('--border', '#E7E5E2')};padding:4pt 6pt;background:${tok('--n-100', '#F4F4F2')}">${esc(c.name)}</th>`).join('')
+  const sample = table.rows.slice(0, 8).map(r => `<tr>${table.columns.map(c => `<td style="border:1px solid ${tok('--border', '#E7E5E2')};padding:4pt 6pt">${esc(r[c.name])}</td>`).join('')}</tr>`).join('')
   const sampleNote = analysis.sampled && analysis.sampled.enabled
-    ? `<p style="color:#C0564B;font-size:9pt;margin:2pt 0 6pt">注：原数据共 ${Number(analysis.sampled.total).toLocaleString('zh-CN')} 行，本次分析按等距抽样采用其中 ${Number(analysis.sampled.used).toLocaleString('zh-CN')} 行，以下图表与结论均基于抽样样本。</p>`
+    ? `<p style="color:${tok('--danger', '#B23A31')};font-size:9pt;margin:2pt 0 6pt">注：原数据共 ${Number(analysis.sampled.total).toLocaleString('zh-CN')} 行，本次分析按等距抽样采用其中 ${Number(analysis.sampled.used).toLocaleString('zh-CN')} 行，以下图表与结论均基于抽样样本。</p>`
     : ''
 
   // 章节图标
@@ -127,10 +150,10 @@ export async function exportWord(table, analysis, quality, fileName) {
 
   const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head><meta charset="utf-8"><title>数据分析报告</title>
-<style>body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:10.5pt;color:#2A2733} h1{font-size:16pt} h2{font-size:13pt;border-bottom:1px solid #E8E5F0;padding-bottom:3pt}</style>
+<style>body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;font-size:10.5pt;color:${tok('--fg', '#27272A')}} h1{font-size:16pt} h2{font-size:13pt;border-bottom:1px solid ${tok('--border', '#E7E5E2')};padding-bottom:3pt}</style>
 </head><body>
 <h1>数据分析报告</h1>
-<p style="color:#6B6577;font-size:9pt">生成时间 ${new Date().toLocaleString('zh-CN')} ｜ 数据 ${table.rows.length} 行 × ${table.columns.length} 列</p>
+<p style="color:${tok('--muted', '#71717A')};font-size:9pt">生成时间 ${new Date().toLocaleString('zh-CN')} ｜ 数据 ${table.rows.length} 行 × ${table.columns.length} 列</p>
 ${sampleNote}
 <h2>${icQuality ? `<img src="${icQuality}" width="16" height="16" style="vertical-align:-3pt;margin-right:4pt"/>` : ''}数据质量</h2>
 <p>综合评分：<b>${quality.score} / 100</b>，检出问题 ${quality.issues.length} 项。</p>
@@ -173,10 +196,10 @@ export async function exportPPTX(analysis, table, quality, fileName) {
   pptx.author = '数据分析 Agent'
   pptx.company = '数据分析 Agent'
   pptx.title = fileName || '数据分析报告'
-  const A = '8B7EC8'   // 主色（不带 #）
-  const DARK = '2A2733' // 正文
-  const MUT = '6B6577'  // 次要
-  const BADC = 'C0564B' // 告警
+  const A = RT().accent.replace('#', '')   // 主色（导出时刻解析令牌）
+  const DARK = RT().fg.replace('#', '')      // 正文
+  const MUT = RT().muted.replace('#', '')    // 次要
+  const BADC = RT().danger.replace('#', '')  // 告警
 
   // 封面
   const cover = pptx.addSlide()

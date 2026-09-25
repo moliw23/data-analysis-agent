@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useMemo } from 'react'
-import { ArrowLeft, Sun, Moon, MessageCircle, Printer, FileText, Presentation, FileSpreadsheet, Sheet, Download } from 'lucide-react'
+import { Sun, Moon, MessageCircle, Printer, FileText, Presentation, FileSpreadsheet, Sheet, Download, Home as HomeIcon, Upload as UploadIcon, BarChart3, AlertTriangle, Clock, Settings } from 'lucide-react'
 import { useStore } from './store.js'
 import { inferSchema, suggestQuestions, analyze, applyFilters, exportTableXLSX, exportTableCSV } from './engine.js'
 import { isLLMConfigured } from './llmProvider.js'
@@ -12,7 +12,7 @@ import { Home, Upload, PreviewView, Dashboard, ChartDetail, Quality, Report, Set
 
 const ScheduleView = React.lazy(() => import('./ScheduleView.jsx'))
 
-const TITLE = { upload: '上传 / 接入数据', preview: '数据预览', dashboard: '分析看板', chart: '图表详情', quality: '数据质量诊断', report: '分析报告', schedule: '定时调度', settings: 'LLM 设置' }
+const TITLE = { upload: '上传 / 接入数据', preview: '数据预览', dashboard: '分析看板', chart: '图表详情', quality: '数据质量诊断', report: '分析报告', schedule: '定时调度', settings: '模型接入' }
 
 export default function App() {
   // ---------- 订阅状态 ----------
@@ -87,7 +87,6 @@ export default function App() {
   const downloadReport = useStore(s => s.downloadReport)
   const sendQuestion = useStore(s => s.sendQuestion)
   const runSchedule = useStore(s => s.runSchedule)
-  const navBack = useStore(s => s.navBack)
   const cancelStream = useStore(s => s.cancelStream)
   const toggleFilterValue = useStore(s => s.toggleFilterValue)
   const clearFilters = useStore(s => s.clearFilters)
@@ -169,15 +168,58 @@ export default function App() {
     return Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, k).map(([v]) => v)
   }
 
+  // 侧栏：当前视图对应的一级导航项（子视图归并到父级高亮）
+  const activeNav = { home: 'home', upload: 'upload', preview: 'upload', dashboard: 'dashboard', chart: 'dashboard', quality: 'quality', report: 'dashboard', schedule: 'schedule', settings: 'settings' }[view]
+  // 需要数据的导航项：未就绪时禁用并拦截跳转
+  const goNav = (target) => {
+    if (target === 'dashboard' && !result) return
+    if (target === 'quality' && !quality) return
+    setView(target)
+  }
+
   return (
     <div className="app">
-      {view !== 'home' && (
-        <div className="topbar no-print">
-          <button className="icon-btn" onClick={navBack}>
-            <ArrowLeft size={20} />
+      <aside className="sidebar no-print">
+        <div className="sidebar-brand">
+          <span className="sidebar-mark"><BarChart3 size={18} /></span>
+          <span className="sidebar-brand-text">数据分析</span>
+        </div>
+        <nav className="sidebar-nav">
+          <button className={`nav-item ${activeNav === 'home' ? 'nav-active' : ''}`} onClick={() => setView('home')}>
+            <span className="nav-ic"><HomeIcon size={18} /></span>
+            <span className="nav-label">概览</span>
           </button>
+          <button className={`nav-item ${activeNav === 'upload' ? 'nav-active' : ''}`} onClick={() => setView('upload')}>
+            <span className="nav-ic"><UploadIcon size={18} /></span>
+            <span className="nav-label">上传接入</span>
+          </button>
+          <button className={`nav-item ${activeNav === 'dashboard' ? 'nav-active' : ''} ${!result ? 'nav-disabled' : ''}`} onClick={() => goNav('dashboard')} disabled={!result}>
+            <span className="nav-ic"><BarChart3 size={18} /></span>
+            <span className="nav-label">分析看板</span>
+          </button>
+          <button className={`nav-item ${activeNav === 'quality' ? 'nav-active' : ''} ${!quality ? 'nav-disabled' : ''}`} onClick={() => goNav('quality')} disabled={!quality}>
+            <span className="nav-ic"><AlertTriangle size={18} /></span>
+            <span className="nav-label">数据质量</span>
+          </button>
+          <button className={`nav-item ${activeNav === 'schedule' ? 'nav-active' : ''}`} onClick={() => setView('schedule')}>
+            <span className="nav-ic"><Clock size={18} /></span>
+            <span className="nav-label">定时调度</span>
+          </button>
+          <button className={`nav-item ${activeNav === 'settings' ? 'nav-active' : ''}`} onClick={() => setView('settings')}>
+            <span className="nav-ic"><Settings size={18} /></span>
+            <span className="nav-label">模型接入</span>
+          </button>
+        </nav>
+        <div className="sidebar-foot">
+          <span className="nav-ic"><BarChart3 size={16} /></span>
+          <span className="nav-label">本地分析 · v1.0</span>
+        </div>
+      </aside>
+
+      <div className="shell-content">
+        <div className="topbar no-print">
           <div style={{ flex: 1 }}>
-            <div className="topbar-title">{TITLE[view]}</div>
+            <div className="topbar-title">{TITLE[view] || '概览'}</div>
             {fileName && <div className="topbar-sub">{fileName} · {table ? `${table.rows.length} 行` : ''}</div>}
           </div>
           <button className="icon-btn" title={appliedTheme === 'dark' ? '切换为浅色' : '切换为暗色'} onClick={() => setTheme(appliedTheme === 'dark' ? 'light' : 'dark')}>
@@ -195,9 +237,9 @@ export default function App() {
             </>
           )}
         </div>
-      )}
 
-      {view === 'home' && <Home onUpload={() => setView('upload')} onSample={handleSample} onSchedule={() => setView('schedule')} onSettings={() => setView('settings')} llmOn={isLLMConfigured()} />}
+        <div className="shell-main">
+          {view === 'home' && <Home onUpload={() => setView('upload')} onSample={handleSample} onSchedule={() => setView('schedule')} onSettings={() => setView('settings')} llmOn={isLLMConfigured()} />}
       {view === 'upload' && <Upload onFile={handleFile} onSample={handleSample} fileRef={fileRef} table={table} fileName={fileName} baseTable={baseTable} baseFileName={baseFileName} joinInfo={joinInfo} uploadTab={uploadTab} onTabChange={setUploadTab} joinDraft={joinDraft} setJoinDraft={setJoinDraft} onJoin={handleJoin} onUndoJoin={handleUndoJoin} datasets={datasets} selectedIds={selectedIds} onToggleSelect={handleToggleSelect} autoLinks={autoLinks} mergeMeta={mergeMeta} batchBusy={batchBusy} onBatchFiles={handleBatchFiles} onRemoveDataset={removeDataset} onRenameDataset={renameDataset} onRunSingle={runSingleAnalysis} onRunMerge={runMergeAnalysis} idbRestoring={idbRestoring} onPreviewDataset={openPreview} onExcludeLink={excludeLink} onIncludeLink={includeLink} streamState={streamState} onCancelStream={cancelStream} />}
       {view === 'preview' && previewDs && <PreviewView key={previewDs.id} ds={previewDs} onClose={closePreview} onAnalyze={runSingleAnalysis} />}
       {view === 'dashboard' && result && <Dashboard result={result} quality={quality} aiMode={aiMode} onChart={openChart} onQuality={() => setView('quality')} onReport={openReport} onChat={() => setChatOpen(true)} onSchedule={() => setView('schedule')} baseTable={baseTable} joinInfo={joinInfo} onJoinOpen={openJoin} onUndoJoin={handleUndoJoin} mergeMeta={mergeMeta} onBackToWorkbench={backToWorkbench} onUndoMerge={undoMerge} onToolbox={() => setToolboxOpen(true)} onTemplate={() => setTemplateOpen(true)} onClean={() => openClean(null)} canUndoClean={cleanHistoryLen > 0} onUndoClean={undoClean} fileName={fileName} activeFilters={activeFilters} filterDimCandidates={filterDimCandidates} topValuesForDim={topValuesForDim} toggleFilterValue={toggleFilterValue} clearFilters={clearFilters} removeFilterDim={removeFilterDim} onDrill={handleChartDrill} />}
@@ -213,7 +255,7 @@ export default function App() {
 
       {(view === 'dashboard') && (
         <>
-          {!chatOpen && <button className="fab" onClick={() => setChatOpen(true)} aria-label="追问"><MessageCircle size={24} /></button>}
+          {!chatOpen && <button className="fab" onClick={() => setChatOpen(true)}><MessageCircle size={18} /><span>问数据</span></button>}
           {chatOpen && (
             <ChatPanel
               messages={chat}
@@ -231,6 +273,8 @@ export default function App() {
 
       {loading && <div className="loading">正在解析与计算…</div>}
       {toast && <div className="toast">{toast}</div>}
+        </div>
+      </div>
     </div>
   )
 }

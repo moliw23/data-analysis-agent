@@ -25,6 +25,9 @@ export default defineConfig({
   build: {
     // 主入口体积已通过 manualChunks 拆出 react/lucide vendor，阈值略放宽以消除历史 >500KB 告警噪声
     chunkSizeWarningLimit: 1500,
+    // 构建前不清理 outDir：本机沙箱的 safe-delete 会拦截 trash 旧 dist 目录，
+    // 导致 prepareOutDir -> emptyDir 抛错、整次构建失败。改为增量写入（index.html 始终指向最新 hash 产物）。
+    emptyOutDir: false,
     rollupOptions: {
       output: {
         // 静态依赖出独立 chunk：React 系 + lucide 图标库从入口 index 拆出，首屏只加载应用代码

@@ -1,6 +1,9 @@
 import React, { Component } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
+// 顺序硬约束：design-tokens.css 是令牌定义层，必须先于 styles.css 导入；
+// styles.css 只消费令牌，不得重复定义同一变量（否则后导入者覆盖令牌层）。
+import './design-tokens.css'
 import './styles.css'
 
 // 全局错误边界：任何渲染异常显示降级页而非整页白屏

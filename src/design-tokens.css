@@ -1,0 +1,465 @@
+/* ============================================================================
+ * design-tokens.css — 数据分析 Agent 设计令牌（唯一颜色/尺寸来源）
+ * ----------------------------------------------------------------------------
+ * 【强制约定】
+ *   1. 本文件是全项目唯一的颜色、字号、间距、圆角、阴影、动效、层级来源。
+ *      任何组件（.jsx / .css）禁止内联硬编码颜色值、禁止魔法数字尺寸。
+ *      唯一例外：#fff / #000 及其带透明度的形式（rgb(255 255 255 / .06) 等）。
+ *   2. 组件样式一律写在 styles.css，只允许 `var(--token)` 引用，禁止重写变量。
+ *   3. 浅色主题 = :root；暗色主题 = [data-theme="dark"]，只覆盖变量值。
+ *   4. 新增令牌必须落在已声明的命名空间内，不得发明同义令牌。
+ *
+ * 【硬编码颜色的授权边界 —— 门禁配置须知】
+ *   原始十六进制值**只允许出现在两个位置**：
+ *     (a) 本文件 design-tokens.css（令牌定义层）；
+ *     (b) design-tokens.json（机器可读镜像）。
+ *   除此之外，src 递归目录下的任何 .jsx / .js / .css 文件里的裸色值都视为违规。
+ *   因此硬编码颜色门禁的扫描范围必须写成：src 递归全量 + 排除本文件
+ *   （注意：本注释不能出现「星号星号斜杠」的 glob 写法，那会提前闭合 CSS 注释）。
+ *   否则本文件会被自己的令牌定义触发误报，令牌层将无法存在。
+ *
+ * 【为什么要有这个文件】
+ *   改造前 styles.css 有 20 处 rgba 函数调用**缺少左括号**（参数被一个多出的
+ *   右括号提前闭合），另有 8 处引用了从未定义的 `--radius` 变量。这些声明
+ *   被浏览器静默丢弃，导致选中态、筛选态、表头底色、冻结列阴影、图表表格
+ *   斑马纹成片失效——这是"界面看起来不高级"的头号技术原因。集中到令牌层后，
+ *   这类错误从"散布在 775 行里靠肉眼找"变成"在一处类型化定义"。
+ *
+ * 【性能提示（上线前必做）】
+ *   请在 index.html 的 <head> 首部加入（比 CSS @import 快 ~200ms）：
+ *     <link rel="preconnect" href="https://fonts.googleapis.com">
+ *     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+ *   中文字形走系统字体（PingFang SC / Microsoft YaHei / 思源黑体），
+ *   不加载 Noto Sans SC 全量字库（中文子集 4MB+，得不偿失）。
+ * ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=JetBrains+Mono:wght@400..600&display=swap');
+
+/* ==========================================================================
+ * 1. A1-identity — 颜色（浅色主题基准）
+ * ======================================================================== */
+:root {
+  color-scheme: light;
+
+  /* ------------------------------------------------------------------
+   * 1.1 中性色阶（11 阶）
+   * 微暖中性（hue ≈ 90，OKLCH 彩度 C ≤ 0.006）——不是米色/奶油色。
+   * 判定依据：奶油色/纸张色的感知门槛是 C ≥ 0.010；本阶全部 C ≤ 0.006，
+   * 在屏幕上读作"中性灰"而非"暖调纸张"。品牌温度由强调色承担。
+   * ------------------------------------------------------------------ */
+  --n-0:    #FFFFFF;  /* 卡片/浮层纯白底 */
+  --n-50:   #FAFAF9;  /* 页面底 bg */
+  --n-100:  #F4F4F2;  /* 二级表面、hover 填充 */
+  --n-150:  #EEEDEA;  /* 内部行分隔线 border-soft、斑马纹 */
+  --n-200:  #E5E3DF;  /* 默认边框 border */
+  --n-300:  #D3D0CA;  /* 强边框、输入框边框 */
+  --n-400:  #A6A39C;  /* placeholder、禁用前景（禁止作为正文）。
+                         注意：暗色层的 --n-400 是刻意的角色例外（比同层 --n-500 更暗），
+                         详见 [data-theme="dark"] 中该行就地说明。两层的语义一致、亮度方向相反。 */
+  --n-500:  #6F6C65;  /* 次级文本 muted（对 --n-50 对比度 5.1:1 AA 通过） */
+  --n-600:  #57544E;  /* 三级文本 meta */
+  --n-700:  #3D3B36;  /* 深色标题、代码前景 */
+  --n-800:  #282621;  /* 反色按钮底 */
+  --n-900:  #1B1B19;  /* 主文本 fg */
+  --n-1000: #101010;  /* 最深：遮罩底、代码块 */
+  --n-inv:  var(--n-0);  /* 反色场景前景（引用而非重复字面量，避免双来源） */
+
+  /* ------------------------------------------------------------------
+   * 1.2 墨绿强调色阶（11 阶）—— 单一强调色，全项目唯一
+   * 色相锁定在墨绿（OKLCH hue ≈ 162）。500/600 为品牌锚点，保留原
+   * #15795B：它在 #FAFAF9 上对比度 5.13:1、白字压在其上 5.36:1，
+   * 双项通过 WCAG AA，且不属于 Tailwind 默认靛蓝系——是真实的品牌差
+   * 异化资产，没有替换理由。仅重新标定明度阶梯与 hover/pressed 档。
+   * ------------------------------------------------------------------ */
+  --accent-50:  #F0F7F4;
+  --accent-100: #DDEDE7;
+  --accent-200: #B8DACD;
+  --accent-300: #8CC3B0;
+  --accent-400: #57A88F;
+  --accent-500: #23836A;
+  --accent-600: #15795B;  /* ← 品牌主色 anchor */
+  --accent-700: #0F6449;
+  --accent-800: #0C5039;
+  --accent-900: #0A3E2D;
+
+  /* ------------------------------------------------------------------
+   * 1.3 语义色（每色 3 档：前景 / 底 / 边框）
+   * 与强调色同属低饱和系，避免界面出现"彩色噪音"。
+   * ------------------------------------------------------------------ */
+  --success:       #1F7A4D;  --success-bg: #EDF7F1;  --success-bd: #BEE0CC;
+  --warn:          #96631A;  --warn-bg:    #FBF3E4;  --warn-bd:    #EBD5A8;
+  --danger:        #B23A31;  --danger-bg:  #FBEFEE;  --danger-bd:  #EFC8C4;
+  --info:          #1F5E8C;  --info-bg:    #EDF3F8;  --info-bd:    #C2D8E8;
+
+  /* ------------------------------------------------------------------
+   * 1.4 A1 语义槽位（组件只允许引用这一层，不直接用色阶）
+   * 命名按"用途"而非"色相"：--accent 不叫 --green。
+   * ------------------------------------------------------------------ */
+  --bg:            var(--n-50);    /* 页面底 */
+  --surface:       var(--n-0);     /* 卡片、面板、顶栏、侧栏 */
+  --surface-sunken: var(--n-100);  /* 内嵌区块、代码块、只读区 */
+  --fg:            var(--n-900);   /* 主文本 */
+  --muted:         var(--n-500);   /* 次级文本（≥4.5:1） */
+  --meta:          var(--n-600);   /* 三级文本：时间戳、计数、口径 */
+  --border:        var(--n-200);   /* 默认 1px 边框 */
+  --border-soft:   var(--n-150);   /* 同容器内分隔线 */
+  --border-strong: var(--n-300);   /* 输入框、可交互控件边框 */
+  --accent:        var(--accent-600);
+  --accent-on:     var(--n-0);     /* 压在 accent 上的前景 */
+  --accent-soft:   color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent-line:   color-mix(in srgb, var(--accent) 32%, transparent);
+  --accent-wash:   color-mix(in srgb, var(--accent) 5%, transparent);
+
+  /* ------------------------------------------------------------------
+   * 1.5 B-slot — 别名槽位（同一角色 ≥1 个实现，组件可安心引用）
+   * ------------------------------------------------------------------ */
+  --fg-2:          var(--fg);
+  --surface-raised: var(--n-0);
+  --surface-warm:  var(--n-100);
+  --line:          var(--border);
+  --text-tertiary: var(--meta);
+}
+
+/* ==========================================================================
+ * 2. A1-structure — 字体族 / 字号 / 字距 / 行高 / 字重
+ * ======================================================================== */
+:root {
+  /* 字体族：拉丁用 Inter，中文回落到系统黑体（PingFang 优先） */
+  --font-display: 'Inter', 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Source Han Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body:    var(--font-display);
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+
+  /* 字号阶梯（8 档）。
+     为什么正文基准是 15px 而不是 16px：本项目是高密度数据工具
+     （表格 36px 行高、表单 40px 控件），16px 正文会把密度推垮。
+     Linear 的 text-regular 同样是 15px/24px。图表与表格单元格用 13px。 */
+  --text-2xs:  11px;  /* 徽标、表格辅助计数 */
+  --text-xs:   12px;  /* 图例、辅助说明、tag */
+  --text-sm:   13px;  /* 表格单元格、次级文本、小按钮 */
+  --text-md:   14px;  /* 控件标签、导航项、菜单项 */
+  --text-base: 15px;  /* 正文基准 ← body 使用此档 */
+  --text-lg:   18px;  /* 卡片标题、区块标题 */
+  --text-xl:   22px;  /* 视图标题 */
+  --text-2xl:  28px;  /* 报告/首屏主标题（唯一大字档，不做 Hero 巨型标题） */
+
+  /* 行高（无单位，仅这几个档位） */
+  --leading-tight:   1.25;  /* 标题 */
+  --leading-snug:    1.4;   /* 小标题、按钮 */
+  --leading-normal:  1.5;   /* 表格、控件 */
+  --leading-relaxed: 1.65;  /* 长段正文、分析结论 */
+
+  /* 字距（letter-spacing）——中英文分治
+     中文：汉字为方块字，任何负字距都会破坏字面节奏 → 恒为 0。
+     拉丁/数字：小字需要正字距补呼吸，大字需要负字距收紧。 */
+  --tracking-body:    0;        /* 中文正文、数字正文 */
+  --tracking-small:   0.01em;   /* 11–13px 拉丁小字 */
+  --tracking-caps:    0.06em;   /* 全大写拉丁标签（必须 ≥0.06em） */
+  --tracking-heading: -0.01em;  /* ≥18px 标题 */
+  --tracking-display: -0.02em;  /* ≥22px 展示级标题 */
+
+  /* 字重（三档制 + 一个展示档） */
+  --weight-read:      400;  /* 正文、描述 */
+  --weight-emphasize: 510;  /* 小标题、需强调的正文（Inter 中间字重） */
+  --weight-announce:  590;  /* 区块标题、CTA */
+  --weight-display:   680;  /* 仅数字大屏/报告标题 */
+
+  /* 数字排版：所有数据表格与统计数字必须开启，避免列不对齐 */
+  --numeric-feature: 'tnum' 1, 'cv11' 1, 'ss01' 1;
+}
+
+/* ==========================================================================
+ * 3. A1-structure — 间距 / 圆角 / 边框 / 尺寸
+ * ======================================================================== */
+:root {
+  /* 间距：严格 4px 网格。禁止 5/6/7/13/15/22/30 等非标值。 */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* 圆角：5 档。卡片硬上限 12px —— 更大的圆角是 AI 模板感的第一特征。 */
+  --radius-xs:   4px;   /* 徽标、checkbox、行列标签 */
+  --radius-sm:   6px;   /* 按钮、输入框、chip */
+  --radius-md:   8px;   /* 卡片、面板、弹层条目 */
+  --radius-lg:   12px;  /* 大卡片、模态、浮层 ← 硬上限 */
+  --radius-pill: 9999px;/* 仅用于开关、计数徽标、状态点 */
+
+  /* 边框：恒为 1px。禁用 >1px 的侧边强调条（AI 模板特征之一）。 */
+  --border-width: 1px;
+  --focus-width:  2px;
+
+  /* 控件尺寸（≥40px 触控热区为硬性要求，桌面高密度档为 32/36） */
+  --control-h-sm: 32px;  /* 表格内联按钮（仅桌面，移动端不得低于 40） */
+  --control-h-md: 36px;  /* 紧凑型次要按钮 */
+  --control-h-lg: 40px;  /* 默认按钮/输入框 ← 触控下限 */
+  --control-h-xl: 48px;  /* 主 CTA、移动端按钮 */
+
+  /* 图标尺寸（lucide-react 三档，禁止 emoji） */
+  --icon-xs: 14px;
+  --icon-sm: 16px;
+  --icon-md: 18px;
+  --icon-lg: 20px;
+  --icon-xl: 24px;
+  --icon-stroke: 1.5;     /* 统一描边；仅 14px 档用 1.75 补偿 */
+
+  /* 布局 */
+  --sidebar-w: 232px;
+  --sidebar-w-rail: 68px;
+  --container-max: 1280px;
+  --topbar-h: 56px;
+  --statusbar-h: 36px;    /* 后端状态条高度（降级可见性保证） */
+  --row-h-table: 36px;    /* 数据表行高 */
+  --row-h-header: 40px;   /* 数据表表头高 */
+  --row-h-dense: 32px;    /* 低频/高密表（用量明细、调用日志） */
+  --section-y: var(--space-5);
+}
+
+/* ==========================================================================
+ * 4. A2 — 层级（阴影）/ 焦点环 / 动效
+ * ======================================================================== */
+:root {
+  /* 层级：Linear 式做法——分层靠 1px 边框 + 极轻阴影，不靠大阴影。
+     禁止"1px 边框 + blur ≥16px 阴影"同时出现在同一元素（幽灵卡片）。 */
+  --elev-flat:   none;
+  --elev-ring:   0 0 0 1px var(--border);
+  --elev-1: 0 1px 2px rgb(0 0 0 / 0.04);
+  --elev-2: 0 1px 2px rgb(0 0 0 / 0.04), 0 2px 6px rgb(0 0 0 / 0.05);
+  --elev-3: 0 4px 12px rgb(0 0 0 / 0.07), 0 1px 3px rgb(0 0 0 / 0.05);   /* popover / tooltip */
+  --elev-4: 0 12px 32px rgb(0 0 0 / 0.12), 0 2px 8px rgb(0 0 0 / 0.06);  /* modal / bottom sheet */
+  --scrim:   rgb(27 27 25 / 0.42);   /* 模态遮罩 */
+  --shadow-inset-top: inset 0 1px 0 rgb(255 255 255 / 0.6);
+
+  /* 焦点环：全项目唯一的键盘焦点视觉，必须 100% 可辨识（WCAG 2.4.11） */
+  --focus-ring:        0 0 0 var(--focus-width) var(--accent-line), 0 0 0 1px var(--accent);
+  --focus-ring-danger: 0 0 0 var(--focus-width) color-mix(in srgb, var(--danger) 40%, transparent);
+
+  /* 动效时长：收敛档位。跨系统默认手感值 150–160ms。 */
+  --dur-instant: 80ms;   /* 按压反馈 */
+  --dur-fast:    120ms;  /* hover 变色、chip 选中 */
+  --dur-base:    160ms;  /* 状态确认、tab 切换 ← 默认值 */
+  --dur-slow:    240ms;  /* 下拉展开、toast 进出 */
+  --dur-slower:  320ms;  /* 页面/模态过渡（上限） */
+
+  /* 缓动：只允许这 3 条。
+     明确禁用回弹/过冲（overshoot）曲线
+     （控制点 0.68 / -0.55 / 0.265 / 1.55），全项目禁用——工具类产品里弹跳 = 玩具感。 */
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);      /* 进场、展开 */
+  --ease-standard: cubic-bezier(0.25, 0.46, 0.45, 0.94); /* 通用状态变化 ← 默认 */
+  --ease-in-out:   cubic-bezier(0.4, 0, 0.2, 1);       /* 位移、抽屉 */
+}
+
+/* ==========================================================================
+ * 4b. A2 — 图表配色 与 骨架屏
+ *     新增背景：EChart.jsx 目前有 18 处硬编码色值（含地图 visualMap 的
+ *     #EAF3F0 / #9CC9BB / #5DA894 / #15795B）。新增图表（Token 用量统计）
+ *     必须走令牌，否则硬编码色值会继续扩散。
+ *
+ *     【配色策略】墨绿同色系 4 阶 + 中性灰 1 阶，共 5 色。不使用彩虹色板。
+ *     【分配规则】
+ *       - 按 ----chart-1 → 5 顺序分配。
+ *       - 需要「直接对比」的两条系列，用 chart-1 与 chart-5（明度差最大），
+ *         不要用 chart-1 与 chart-2 —— 同色系相邻阶在折线宽度较细时难以区分。
+ *       - 堆叠图（构成分析）用 chart-1 → 4 逐阶递进，表达"份额"语义。
+ *       - 系列数 > 5：把最小的几组合并为「其他」（chart-5 中性灰），
+ *         而不是继续加色。超过 5 个系列时任何配色方案都不可区分。
+ * ======================================================================== */
+:root {
+  --chart-1: var(--accent-600);  /* 主系列 = 品牌 anchor（引用，单一来源） */
+  --chart-2: var(--accent-400);  /* 次系列 */
+  --chart-3: #9CC3B4;  /* 第三系列（色阶无同值项，保留字面量） */
+  --chart-4: #C9D8D1;  /* 第四系列 / 面积填充 / 堆叠底层 */
+  --chart-5: var(--n-500);       /* 对比系列 = 中性灰（引用，单一来源） */
+  --chart-grid: var(--border-soft);  /* 网格线 */
+  --chart-axis: var(--n-400);        /* 坐标轴线 */
+
+  /* 骨架屏：尺寸必须与原内容一致，避免 CLS */
+  --mask-fill:  var(--surface-sunken);  /* 骨架块底色 */
+  --mask-sheen: var(--n-150);           /* 微光扫过的高光色 */
+}
+
+/* ==========================================================================
+ * 5. A1-structure — z-index 契约（禁止裸数字，必须引用令牌）
+ * ======================================================================== */
+:root {
+  --z-base:      0;
+  --z-row:       1;    /* 表格冻结行号列 */
+  --z-col:       2;    /* 表格冻结表头 */
+  --z-corner:    3;    /* 表头 × 行号交叉单元格 */
+  --z-float:     20;   /* 图表内浮钮、备注气泡 */
+  --z-statusbar: 95;   /* 后端状态条（必须低于顶栏，避免遮住顶栏操作） */
+  --z-sticky:    100;  /* 顶栏、侧栏 */
+  --z-fab:       200;  /* 浮动追问按钮 */
+  --z-drawer:    300;  /* 聊天面板 / 侧边抽屉 */
+  --z-modal:     400;  /* 工具箱 / 模板库 / 清洗面板 + 遮罩 */
+  --z-toast:     500;
+  --z-tooltip:   600;  /* 永远最上 */
+}
+
+/* ==========================================================================
+ * 6. A1-structure — 断点契约
+ * CSS 自定义属性无法用于 @media 条件，此处以文档化变量 + JSON 双写，
+ * 供 JS（matchMedia）与构建期（postcss）单点取用。禁止在组件里写裸断点。
+ *   phone   ≤ 639px   单列 / 底部 TabBar      （沿用现有 767px 语义，收紧到 639 更准）
+ *   tablet  640–1023px 侧栏收为图标轨
+ *   desktop 1024–1279px 完整侧栏 + 12 栏栅格
+ *   wide    ≥ 1280px  容器封顶 1280px 居中
+ * ======================================================================== */
+:root {
+  --bp-phone:   639px;
+  --bp-tablet:  1023px;
+  --bp-desktop: 1024px;
+  --bp-wide:    1279px;
+}
+
+/* ==========================================================================
+ * 7. 暗色主题 — 只覆盖变量值，零组件样式重写
+ *    亮度递进表达层级（不做阴影加深），这是暗色下唯一正确的做法。
+ * ======================================================================== */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* 中性色阶（暗色层）：索引越低越亮、越高越暗 —— 方向与浅色层一致。
+     但**角色映射与浅色层不同**：浅色层 0–400 主要承担「表面」；
+     暗色层 0–400 承担「文本由亮到暗」（fg → disabled）。
+     唯一不单调处是 --n-400 —— 就地说明写在该行注释里，不在本处重复，
+     以免两处说明随时间漂移（本处只保留「角色映射不同」这一条概括）。 */
+  --n-0:    #FFFFFF;
+  --n-50:   #F2F3F5;
+  --n-100:  #DDE0E4;
+  --n-150:  #C4C8CE;
+  --n-200:  #A9ADB4;
+  --n-300:  #83878E;
+  --n-400:  #6A6E75;  /* ▲ 刻意的角色例外：本值**比 --n-500 更暗**，偏离「索引越大越暗」的阶梯。
+                         为什么：--n-400 专供「占位 / 禁用前景」，在暗色下必须比 muted
+                         （--n-500）更暗才符合语义 —— 禁用态不该比正文更显眼。
+                         【请勿「修正」为比 --n-500 更亮】那会让禁用态抢过正文的注意力。
+                         已登记为 Token 门禁的预期例外（design-tokens.json →
+                         guard.intentionalExceptions.n400DarkDimmerThan500），
+                         改动本值会使门禁报红。清理时机：独立出 --fg-disabled 时一并删除本例外。 */
+  --n-500:  #8B8F96;  /* 暗色 muted（对 #0F1011 对比度 5.87:1 AA 通过） */
+  --n-600:  #7C8087;
+  --n-700:  #383C41;
+  --n-800:  #2A2D31;
+  --n-900:  #1F2124;
+  --n-1000: #08090A;
+
+  /* 强调色阶：暗色下整体提亮，保证彩色文本与图标可读 */
+  --accent-50:  #0D1F1A;
+  --accent-100: #12332A;
+  --accent-200: #1B4B3D;
+  --accent-300: #276855;
+  --accent-400: #338A70;
+  --accent-500: #3DA384;
+  --accent-600: #46B494;  /* ← 暗色品牌 anchor（对比度 7.45:1 ） */
+  --accent-700: #6BC5AA;
+  --accent-800: #97D7C2;
+  --accent-900: #C4E8DD;
+
+  --success: #5FB98A;  --success-bg: #10251A;  --success-bd: #26523A;
+  --warn:    #D9A24B;  --warn-bg:    #2A2110;  --warn-bd:    #584323;
+  --danger:  #E07A70;  --danger-bg:  #2B1614;  --danger-bd:  #5A2E29;
+  --info:    #6FA8D4;  --info-bg:    #11202C;  --info-bd:    #294761;
+
+  /* 语义槽位重映射 */
+  --bg:             #0F1011;
+  --surface:        #17181A;
+  --surface-sunken: #0B0C0D;
+  --fg:             var(--n-50);
+  --muted:          var(--n-500);
+  --meta:           var(--n-600);
+  --border:         var(--n-800);
+  --border-soft:    #212427;  /* 色阶无同值项，保留字面量 */
+  --border-strong:  var(--n-700);
+  --accent:         var(--accent-600);
+  --accent-on:      #0E1A16;
+  --accent-soft:    color-mix(in srgb, var(--accent) 14%, transparent);
+  --accent-line:    color-mix(in srgb, var(--accent) 38%, transparent);
+  --accent-wash:    color-mix(in srgb, var(--accent) 7%, transparent);
+
+  /* 层级：暗色下阴影对比弱，靠亮度递进，同时略微加深阴影做分离 */
+  --elev-1: 0 1px 2px rgb(0 0 0 / 0.45);
+  --elev-2: 0 1px 2px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35);
+  --elev-3: 0 4px 14px rgb(0 0 0 / 0.55), 0 1px 3px rgb(0 0 0 / 0.4);
+  --elev-4: 0 14px 36px rgb(0 0 0 / 0.6), 0 2px 10px rgb(0 0 0 / 0.45);
+  --scrim:  rgb(0 0 0 / 0.6);
+  --shadow-inset-top: inset 0 1px 0 rgb(255 255 255 / 0.04);
+
+  /* 暗色下焦点环用亮色 accent，保证在深底上足够跳 */
+  --focus-ring: 0 0 0 var(--focus-width) var(--accent-line), 0 0 0 1px var(--accent);
+
+  /* 图表配色：暗色下整体提亮，保证线条与填充在 #0F1011 底上可读 */
+  --chart-1: var(--accent-600);
+  --chart-2: var(--accent-800);
+  --chart-3: #5F8C7C;  /* 色阶无同值项，保留字面量 */
+  --chart-4: #3A5A50;
+  --chart-5: var(--n-500);
+  --chart-grid: var(--border-soft);
+  --chart-axis: var(--n-400);
+
+  /* 骨架屏：暗色下高光要比底色亮，方向与浅色相反 */
+  --mask-fill:  var(--surface-sunken);
+  --mask-sheen: var(--n-300);
+}
+
+/* ==========================================================================
+ * 8. Token 层基础样式 —— 非组件样式，只做全局默认值
+ *    （组件样式一律在 styles.css，且只允许引用上面的变量）
+ * ======================================================================== */
+
+/* Tabler/Linear 式全局默认：关闭输入类控件的原生外观差异 */
+:root {
+  --font-feature-ui: 'cv11' 1, 'ss01' 1;   /* Inter 备用字形（单层 g、直尾 l） */
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  font-feature-settings: var(--font-feature-ui);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* 中文正文不施加字距；拉丁段落由组件按需覆盖 */
+  letter-spacing: var(--tracking-body);
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--fg);
+}
+
+/* 全局键盘焦点环 —— 改造前全项目 0 条 :focus-visible，键盘用户完全失明。
+   鼠标点击不会触发（:focus-visible 语义），不会污染鼠标交互观感。 */
+:focus-visible {
+  outline: var(--focus-width) solid transparent;
+  outline-offset: 2px;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+/* 强制消除默认 outline 的组件必须自行提供可见替代，禁止 outline: none 裸用 */
+:focus:not(:focus-visible) { outline: none; }
+
+/* 尊重系统减弱动效偏好：这是 WCAG 2.3.3，不是可选项 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 打印：导出 PDF 时报表面板不参与 */
+@media print {
+  body { background: #FFFFFF; }
+}

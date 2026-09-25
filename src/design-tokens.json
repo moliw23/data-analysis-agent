@@ -1,0 +1,301 @@
+{
+  "$schema": "https://design-tokens.org/schema.json",
+  "$description": "数据分析 Agent — 设计令牌（机器可读版）。唯一颜色/尺寸来源，与 src/design-tokens.css 一一对应。任何组件禁止内联硬编码。生成时间基准：Phase 1 设计系统冻结版。",
+  "$meta": {
+    "designDirection": "Linear 式极简高密度专业工程工具",
+    "register": "product",
+    "platform": "web",
+    "scale": { "DESIGN_VARIANCE": 3, "MOTION_INTENSITY": 3, "VISUAL_DENSITY": 8 },
+    "iconLibrary": "lucide-react@0.400",
+    "emojiAsIcon": "forbidden",
+    "accentDecision": "保留墨绿色相，重新标定明度阶梯"
+  },
+
+  "color": {
+    "neutral": {
+      "$type": "color",
+      "0":    { "value": "#FFFFFF", "light": "#FFFFFF", "dark": "#FFFFFF" },
+      "50":   { "value": "#FAFAF9", "light": "#FAFAF9", "dark": "#F2F3F5" },
+      "100":  { "value": "#F4F4F2", "light": "#F4F4F2", "dark": "#DDE0E4" },
+      "150":  { "value": "#EEEDEA", "light": "#EEEDEA", "dark": "#C4C8CE" },
+      "200":  { "value": "#E5E3DF", "light": "#E5E3DF", "dark": "#A9ADB4" },
+      "300":  { "value": "#D3D0CA", "light": "#D3D0CA", "dark": "#83878E" },
+      "400":  { "value": "#A6A39C", "light": "#A6A39C", "dark": "#6A6E75" },
+      "500":  { "value": "#6F6C65", "light": "#6F6C65", "dark": "#8B8F96" },
+      "600":  { "value": "#57544E", "light": "#57544E", "dark": "#7C8087" },
+      "700":  { "value": "#3D3B36", "light": "#3D3B36", "dark": "#383C41" },
+      "800":  { "value": "#282621", "light": "#282621", "dark": "#2A2D31" },
+      "900":  { "value": "#1B1B19", "light": "#1B1B19", "dark": "#1F2124" },
+      "1000": { "value": "#101010", "light": "#101010", "dark": "#08090A" }
+    },
+
+    "accent": {
+      "$type": "color",
+      "$note": "墨绿单色阶。500/600 为品牌锚点，浅色主题用 600 (#15795B) / 暗色主题用 600 (#46B494)。",
+      "50":  { "light": "#F0F7F4", "dark": "#0D1F1A" },
+      "100": { "light": "#DDEDE7", "dark": "#12332A" },
+      "200": { "light": "#B8DACD", "dark": "#1B4B3D" },
+      "300": { "light": "#8CC3B0", "dark": "#276855" },
+      "400": { "light": "#57A88F", "dark": "#338A70" },
+      "500": { "light": "#23836A", "dark": "#3DA384" },
+      "600": { "light": "#15795B", "dark": "#46B494", "$anchor": true },
+      "700": { "light": "#0F6449", "dark": "#6BC5AA" },
+      "800": { "light": "#0C5039", "dark": "#97D7C2" },
+      "900": { "light": "#0A3E2D", "dark": "#C4E8DD" }
+    },
+
+    "semantic": {
+      "success": { "$type": "color", "value": { "light": "#1F7A4D", "dark": "#5FB98A" }, "bg": { "light": "#EDF7F1", "dark": "#10251A" }, "border": { "light": "#BEE0CC", "dark": "#26523A" } },
+      "warn":    { "$type": "color", "value": { "light": "#96631A", "dark": "#D9A24B" }, "bg": { "light": "#FBF3E4", "dark": "#2A2110" }, "border": { "light": "#EBD5A8", "dark": "#584323" } },
+      "danger":  { "$type": "color", "value": { "light": "#B23A31", "dark": "#E07A70" }, "bg": { "light": "#FBEFEE", "dark": "#2B1614" }, "border": { "light": "#EFC8C4", "dark": "#5A2E29" } },
+      "info":    { "$type": "color", "value": { "light": "#1F5E8C", "dark": "#6FA8D4" }, "bg": { "light": "#EDF3F8", "dark": "#11202C" }, "border": { "light": "#C2D8E8", "dark": "#294761" } }
+    },
+
+    "role": {
+      "$description": "A1 语义槽位。组件只允许引用这一层，禁止直接用色阶。",
+      "$references": "本节点在 CSS 中的实现：浅色层与暗色层的角色令牌都通过 var() 引用色阶（如 --muted: var(--n-500)、--fg: var(--n-50)、--border: var(--n-800)、--accent: var(--accent-600)），因此同一值只有一个来源。本文件记录的是解析后的值，便于工具读取；改动色阶时引用项自动跟随。此约束由附录 A §4.6 的『颜色域重复字面量 = 0』断言守住",
+      "bg":             { "$type": "color", "value": { "light": "#FAFAF9", "dark": "#0F1011" } },
+      "surface":        { "$type": "color", "value": { "light": "#FFFFFF", "dark": "#17181A" } },
+      "surfaceSunken":  { "$type": "color", "value": { "light": "#F4F4F2", "dark": "#0B0C0D" } },
+      "fg":             { "$type": "color", "value": { "light": "#1B1B19", "dark": "#F2F3F5" } },
+      "fgSecondary":    { "$type": "color", "value": { "light": "#1B1B19", "dark": "#F2F3F5" } },
+      "muted":          { "$type": "color", "value": { "light": "#6F6C65", "dark": "#8B8F96" } },
+      "meta":           { "$type": "color", "value": { "light": "#57544E", "dark": "#7C8087" } },
+      "border":         { "$type": "color", "value": { "light": "#E5E3DF", "dark": "#2A2D31" } },
+      "borderSoft":     { "$type": "color", "value": { "light": "#EEEDEA", "dark": "#212427" } },
+      "borderStrong":   { "$type": "color", "value": { "light": "#D3D0CA", "dark": "#383C41" } },
+      "accent":         { "$type": "color", "value": { "light": "#15795B", "dark": "#46B494" } },
+      "accentOn":       { "$type": "color", "value": { "light": "#FFFFFF", "dark": "#0E1A16" } },
+      "accentSoft":     { "$type": "color", "value": { "light": "color-mix(in srgb, #15795B 10%, transparent)", "dark": "color-mix(in srgb, #46B494 14%, transparent)" } },
+      "accentLine":     { "$type": "color", "value": { "light": "color-mix(in srgb, #15795B 32%, transparent)", "dark": "color-mix(in srgb, #46B494 38%, transparent)" } },
+      "accentWash":     { "$type": "color", "value": { "light": "color-mix(in srgb, #15795B 5%, transparent)", "dark": "color-mix(in srgb, #46B494 7%, transparent)" } },
+      "scrim":          { "$type": "color", "value": { "light": "rgb(27 27 25 / 0.42)", "dark": "rgb(0 0 0 / 0.6)" } }
+    },
+
+    "usage": {
+      "$description": "每屏最多 2 处可见的 accent 使用（C 端约束，评审项）",
+      "accentPerViewportMax": 2
+    }
+  },
+
+  "font": {
+    "family": {
+      "display": { "$type": "fontFamily", "value": "Inter, 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Source Han Sans SC', -apple-system, BlinkMacSystemFont, sans-serif" },
+      "body":    { "$type": "fontFamily", "value": "Inter, 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei', 'Source Han Sans SC', -apple-system, BlinkMacSystemFont, sans-serif" },
+      "mono":    { "$type": "fontFamily", "value": "'JetBrains Mono', ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace" }
+    },
+    "size": {
+      "$note": "正文基准 15px（Linear text-regular 同值）。高密度数据工具不采用 16px 正文。",
+      "2xs":  { "$type": "dimension", "value": "11px", "lineHeight": 1.45, "usage": "徽标、图表辅助计数" },
+      "xs":   { "$type": "dimension", "value": "12px", "lineHeight": 1.35, "usage": "图例、辅助说明、tag" },
+      "sm":   { "$type": "dimension", "value": "13px", "lineHeight": 1.55, "usage": "表格单元格、次级文本、小按钮" },
+      "md":   { "$type": "dimension", "value": "14px", "lineHeight": 1.55, "usage": "控件标签、导航项、菜单项" },
+      "base": { "$type": "dimension", "value": "15px", "lineHeight": 1.65, "usage": "正文基准 ← body" },
+      "lg":   { "$type": "dimension", "value": "18px", "lineHeight": 1.3,  "usage": "卡片标题、区块标题" },
+      "xl":   { "$type": "dimension", "value": "22px", "lineHeight": 1.25, "usage": "视图标题" },
+      "2xl":  { "$type": "dimension", "value": "28px", "lineHeight": 1.2,  "usage": "报告/首屏主标题（唯一大字档）" }
+    },
+    "weight": {
+      "read":     { "$type": "fontWeight", "value": 400 },
+      "emphasize": { "$type": "fontWeight", "value": 510 },
+      "announce": { "$type": "fontWeight", "value": 590 },
+      "display":  { "$type": "fontWeight", "value": 680 }
+    },
+    "tracking": {
+      "$note": "中文恒为 0 —— 汉字为方块字，负字距破坏字面节奏。",
+      "body":     { "$type": "dimension", "value": "0", "scope": "中文正文 / 数字正文" },
+      "small":    { "$type": "dimension", "value": "0.01em", "scope": "11–13px 拉丁小字" },
+      "caps":     { "$type": "dimension", "value": "0.06em", "scope": "全大写拉丁标签（下限 0.06em）" },
+      "heading":  { "$type": "dimension", "value": "-0.01em", "scope": "≥18px 标题" },
+      "display":  { "$type": "dimension", "value": "-0.02em", "scope": "≥22px 展示级标题" }
+    },
+    "featureSettings": {
+      "numeric": { "$type": "string", "value": "'tnum' 1, 'cv11' 1, 'ss01' 1", "$note": "所有数据表格与统计数字必须开启 tabular-nums" }
+    }
+  },
+
+  "space": {
+    "$type": "dimension",
+    "$note": "严格 4px 网格，禁止 5/6/7/13/15/22/30",
+    "0": "0", "1": "4px", "2": "8px", "3": "12px", "4": "16px",
+    "5": "20px", "6": "24px", "8": "32px", "10": "40px", "12": "48px",
+    "16": "64px", "20": "80px"
+  },
+
+  "radius": {
+    "$type": "dimension",
+    "$note": "卡片圆角硬上限 12px，≥24px 属 AI 模板特征",
+    "xs": "4px", "sm": "6px", "md": "8px", "lg": "12px", "pill": "9999px"
+  },
+
+  "border": {
+    "width": { "$type": "dimension", "value": "1px", "$note": "恒为 1px；禁止 >1px 侧边彩色强调条" },
+    "focusWidth": { "$type": "dimension", "value": "2px" }
+  },
+
+  "size": {
+    "controlHeight": {
+      "$note": "40px 为触控热区下限（WCAG 2.5.5 / 用户硬性偏好）；32px 仅限桌面表格内联按钮，移动端强制升为 40px",
+      "sm": "32px", "md": "36px", "lg": "40px", "xl": "48px"
+    },
+    "icon": {
+      "xs": "14px", "sm": "16px", "md": "18px", "lg": "20px", "xl": "24px",
+      "stroke": { "$type": "number", "value": 1.5, "$note": "统一描边；14px 档用 1.75 补偿" }
+    },
+    "layout": {
+      "sidebarWidth": "232px", "sidebarWidthRail": "68px",
+      "containerMax": "1280px", "topbarHeight": "56px",
+      "statusbarHeight": "36px",
+      "tableRowHeight": "36px", "tableHeaderHeight": "40px", "tableRowHeightDense": "32px"
+    }
+  },
+
+  "shadow": {
+    "$note": "Linear 式：分层靠 1px 边框 + 极轻阴影。禁止 1px 边框与 blur ≥16px 阴影同时出现在同一元素。",
+    "flat":  { "$type": "boxShadow", "value": "none" },
+    "ring":  { "$type": "boxShadow", "value": "0 0 0 1px var(--border)" },
+    "1": { "$type": "boxShadow", "light": "0 1px 2px rgb(0 0 0 / 0.04)", "dark": "0 1px 2px rgb(0 0 0 / 0.45)" },
+    "2": { "$type": "boxShadow", "light": "0 1px 2px rgb(0 0 0 / 0.04), 0 2px 6px rgb(0 0 0 / 0.05)", "dark": "0 1px 2px rgb(0 0 0 / 0.5), 0 2px 6px rgb(0 0 0 / 0.35)" },
+    "3": { "$type": "boxShadow", "light": "0 4px 12px rgb(0 0 0 / 0.07), 0 1px 3px rgb(0 0 0 / 0.05)", "dark": "0 4px 14px rgb(0 0 0 / 0.55), 0 1px 3px rgb(0 0 0 / 0.4)" },
+    "4": { "$type": "boxShadow", "light": "0 12px 32px rgb(0 0 0 / 0.12), 0 2px 8px rgb(0 0 0 / 0.06)", "dark": "0 14px 36px rgb(0 0 0 / 0.6), 0 2px 10px rgb(0 0 0 / 0.45)" },
+    "focus": { "$type": "boxShadow", "value": "0 0 0 2px var(--accent-line), 0 0 0 1px var(--accent)" }
+  },
+
+  "motion": {
+    "duration": {
+      "$type": "duration",
+      "instant": "80ms", "fast": "120ms", "base": "160ms", "slow": "240ms", "slower": "320ms",
+      "$note": "slower 320ms 为上限，禁止超过 400ms"
+    },
+    "easing": {
+      "out":      { "$type": "cubicBezier", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "usage": "进场、展开" },
+      "standard": { "$type": "cubicBezier", "value": "cubic-bezier(0.25, 0.46, 0.45, 0.94)", "$default": true, "usage": "通用状态变化" },
+      "inOut":    { "$type": "cubicBezier", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "usage": "位移、抽屉" },
+      "$forbidden": {
+        "bounceControlPoints": [0.68, -0.55, 0.265, 1.55],
+        "reason": "回弹/过冲曲线在工具类产品中读作玩具感，全项目禁用"
+      }
+    },
+    "reducedMotion": { "$type": "boolean", "value": true, "$note": "必须实现 prefers-reduced-motion 降级：动画降至 1ms" }
+  },
+
+  "zIndex": {
+    "$note": "禁止裸数字，必须引用令牌",
+    "base": 0, "row": 1, "col": 2, "corner": 3,
+    "float": 20, "statusbar": 95, "sticky": 100, "fab": 200,
+    "drawer": 300, "modal": 400, "toast": 500, "tooltip": 600
+  },
+
+  "chart": {
+    "$note": "图表配色：墨绿同色系 4 阶 + 中性灰 1 阶，共 5 色。不使用彩虹色板。分配规则：按 1→5 顺序；需要直接对比的两条系列用 chart-1 与 chart-5（明度差最大），不要用相邻阶；堆叠图用 1→4 表达份额；系列数 > 5 时把最小几组合并为「其他」(chart-5)，不要继续加色。",
+    "$references": "本节点在 CSS 中的实现：series1/series2/series5 与 role.* 均为 var() 引用（单一来源），其余为字面量。见 design-tokens.css 的 §4b 与暗色层注释。改动色阶时引用项会自动跟随，无需同步修改本文件",
+    "series1":  { "$type": "color", "value": { "light": "#15795B", "dark": "#46B494" }, "role": "主系列", "$css": "var(--accent-600)" },
+    "series2":  { "$type": "color", "value": { "light": "#57A88F", "dark": "#97D7C2" }, "role": "次系列", "$css": "var(--accent-400) / 暗色 var(--accent-800)" },
+    "series3":  { "$type": "color", "value": { "light": "#9CC3B4", "dark": "#5F8C7C" }, "role": "第三系列", "$css": "字面量（色阶无同值项）" },
+    "series4":  { "$type": "color", "value": { "light": "#C9D8D1", "dark": "#3A5A50" }, "role": "第四系列 / 面积填充 / 堆叠底层", "$css": "字面量（色阶无同值项）" },
+    "series5":  { "$type": "color", "value": { "light": "#6F6C65", "dark": "#8B8F96" }, "role": "对比系列（中性灰，用于「其他」与对照线）", "$css": "var(--n-500)" },
+    "grid":     { "$type": "color", "value": { "light": "var(--border-soft)", "dark": "var(--border-soft)" }, "role": "网格线" },
+    "axis":     { "$type": "color", "value": { "light": "var(--n-400)", "dark": "var(--n-400)" }, "role": "坐标轴线" },
+    "$resolvedFromHardcoded": {
+      "$note": "EChart.jsx 现有 18 处硬编码色值需迁移到上述令牌，含地图 visualMap 的 #EAF3F0 / #9CC9BB / #5DA894 / #15795B",
+      "EChart.jsx": ["#ECEAE3", "#9C978D", "#7A756E", "#27272A", "#A1A1AA", "#1F1B28", "#EAF3F0", "#9CC9BB", "#5DA894", "#15795B", "#d35400", "#71717A"]
+    }
+  },
+
+  "skeleton": {
+    "$note": "骨架屏。尺寸必须与原内容一致以避免 CLS；禁止用圆形 spinner 替代内容区骨架",
+    "fill":  { "$type": "color", "value": { "light": "var(--surface-sunken)", "dark": "var(--surface-sunken)" }, "role": "骨架块底色" },
+    "sheen": { "$type": "color", "value": { "light": "var(--n-150)", "dark": "var(--n-300)" }, "role": "微光扫过高光；暗色下应比底色亮（方向与浅色相反）" },
+    "animation": { "$type": "duration", "value": "1.4s", "easing": "var(--ease-in-out)", "property": "transform: translateX()", "$note": "禁止动画 width/left" }
+  },
+
+  "breakpoint": {
+    "$note": "CSS 变量无法用于 @media，此处为 JS/构建期单一来源；组件禁止写裸断点",
+    "phone": { "max": "639px", "layout": "单列 / 底部 TabBar" },
+    "tablet": { "min": "640px", "max": "1023px", "layout": "侧栏收为 68px 图标轨" },
+    "desktop": { "min": "1024px", "max": "1279px", "layout": "完整 232px 侧栏 + 12 栏栅格" },
+    "wide": { "min": "1280px", "layout": "容器封顶 1280px 居中" }
+  },
+
+  "accessibility": {
+    "contrast": { "bodyText": "4.5:1", "largeText": "3:1", "uiComponent": "3:1", "standard": "WCAG 2.1 AA" },
+    "touchTarget": { "min": "40px", "note": "用户硬性偏好 ≥40px；WCAG 2.5.5 建议 44px" },
+    "focusVisible": { "required": true, "ring": "2px 实色 + 2px 半透明外环，outline-offset 2px" },
+    "keyboard": { "required": true, "note": "所有交互元素可达；禁止 :focus { outline: none } 裸用" },
+    "notByColorAlone": { "required": true, "note": "严重度/置信度必须同时有文字或形状，不能只靠颜色" }
+  },
+
+  "icon": {
+    "library": "lucide-react",
+    "version": "0.400.0",
+    "verifiedAgainst": "node_modules/lucide-react/dist/lucide-react.d.ts",
+    "verificationMethod": "从 export{} 块提取全部导出名（去重 4950），与 declare const 正式声明集合求差，区分正式名与弃用别名",
+    "sizes": [16, 20, 24],
+    "inlineSize": "14px",
+    "defaultStroke": 1.5,
+    "emojiForbidden": true,
+    "emojiDetectionRegex": "[\\x{1F300}-\\x{1F9FF}\\x{2600}-\\x{26FF}\\x{2700}-\\x{27BF}]",
+
+    "$rule": "新代码只允许使用 canonical 名。使用 deprecatedAliases 中的名字视为 review 退回项。",
+    "canonicalNav": {
+      "home": "House", "upload": "Upload", "dashboard": "BarChart3", "quality": "TriangleAlert",
+      "kb": "BookOpen", "memory": "Brain", "schedule": "Clock", "runs": "History",
+      "notifications": "Bell", "settings": "Settings"
+    },
+    "canonicalCapability": {
+      "backendOffline": "ServerOff", "reconnecting": "RefreshCw", "offlineNetwork": "WifiOff",
+      "semanticSearch": "Search", "keywordSearch": "TriangleAlert",
+      "privacyMode": "ShieldCheck", "memoryNotPersisted": "Lock"
+    },
+    "deprecatedAliases": {
+      "$note": "0.400 中仅作为兼容别名存在，未来版本会移除。右列为正式名。",
+      "AlertTriangle": "TriangleAlert",
+      "CheckCircle2": "CircleCheck",
+      "Home": "House",
+      "Wand2": "WandSparkles",
+      "HelpCircle": "CircleHelp",
+      "XCircle": "CircleX",
+      "AlertCircle": "CircleAlert",
+      "CheckCircle": "CircleCheckBig",
+      "MoreHorizontal": "Ellipsis",
+      "GanttChartSquare": "SquareGanttChart"
+    },
+    "deprecatedInUse": {
+      "$note": "现有代码在用的别名。不阻塞本轮，登记为技术债，触碰对应文件时顺手迁移。",
+      "AlertTriangle": ["src/App.jsx", "src/components/Views.jsx", "src/ChartToolbox.jsx"],
+      "CheckCircle2": ["src/App.jsx", "src/components/Views.jsx"],
+      "Home": ["src/App.jsx"],
+      "Wand2": ["src/components/Views.jsx", "src/CleanPanel.jsx", "src/ChartToolbox.jsx"],
+      "HelpCircle": ["src/components/Views.jsx"]
+    },
+    "namingTrap": {
+      "CheckCircle": "CircleCheckBig（粗环粗勾）",
+      "CheckCircle2": "CircleCheck（常规环勾）",
+      "$warning": "后缀 2 不是「更粗的那个」。CheckCircle 与 CheckCircle2 的映射是反直觉的。需要「粗勾」的强确认场景显式写 CircleCheckBig。"
+    },
+    "notIn040": {
+      "$note": "这些名字在 0.400 中不存在，lucide 的 Chart* 重命名发生在此版本之后。",
+      "chartIcons": ["ChartColumn", "ChartColumnBig", "ChartPie", "ChartLine", "ChartArea", "ChartNoAxesCombined"],
+      "other": ["RadarChart", "Waveform", "ChartNetwork"],
+      "chartCanonicalIn040": {
+        "bar": "BarChart3", "pie": "PieChart", "line": "LineChart",
+        "area": "AreaChart", "scatter": "ScatterChart", "gantt": "GanttChart"
+      },
+      "$fallback": "雷达图 / 波形图 / 关联网络图在 0.400 无对应图标，改用文字标签或复用 Activity / GitGraph / Network。"
+    }
+  },
+
+  "guard": {
+    "$description": "大湾区靓仔门禁扫描项",
+    "forbiddenPatterns": [
+      { "id": "emoji-as-icon", "regex": "[\\x{1F300}-\\x{1F9FF}\\x{2600}-\\x{26FF}\\x{2700}-\\x{27BF}]", "scope": "src/**/*.{jsx,js,css}" },
+      { "id": "purple-pink-gradient", "hexValues": ["7C3AED", "A855F7", "9333EA", "EC4899"], "hexPrefixNote": "检测脚本拼接 # 前缀后再匹配，避免令牌表自身触发门禁", "scope": "src/**/*.{jsx,js,css}" },
+      { "id": "bounce-easing", "controlPoints": [0.68, -0.55, 0.265, 1.55], "scope": "src/**/*.{jsx,js,css}" },
+      { "id": "hardcoded-hex", "regex": "#[0-9a-fA-F]{3,8}\\b", "scope": "src/**/*.jsx", "allow": ["#fff", "#ffffff", "#000", "#000000"], "note": "组件内联 hex 一律禁止，必须走 var(--token)" },
+      { "id": "broken-declaration", "pattern": "函数名后缺少左括号，参数被一个多出的右括号提前闭合", "regex": "rgba\\([^()]*\\),[[:space:]]*0?\\.[0-9]+\\)", "scope": "src/**/*.css", "expectedHits": 0, "falsePositiveWarning": "禁止使用宽松模式（函数名 + 任意非括号字符 + 右括号逗号）——它会在 styles.css:21 与 :709 的 --shadow-raised 双层阴影上误报 2 次，因为那里的逗号是多层阴影的合法分隔符。必须使用本条目给出的精确模式。", "note": "改造前 styles.css 存在 20 处该缺陷声明，分布在 17 行" },
+      { "id": "undefined-var", "variableName": "--radius", "scope": "src/**/*.css", "note": "未定义变量，改造前存在 8 处" },
+      { "id": "deprecated-icon-alias", "names": ["AlertTriangle", "CheckCircle2", "Home", "Wand2", "HelpCircle", "XCircle", "AlertCircle", "CheckCircle", "MoreHorizontal", "GanttChartSquare"], "scope": "src/*.jsx,src/components/*.jsx", "expectedHits": 0, "exemptFiles": ["src/App.jsx", "src/components/Views.jsx", "src/ChartToolbox.jsx", "src/CleanPanel.jsx"], "note": "新增文件必须为 0；既有 4 个文件的别名引用登记为技术债，触碰时迁移。新增文件若出现则退回。" },
+      { "id": "nonexistent-icon", "names": ["ChartColumn", "ChartColumnBig", "ChartPie", "ChartLine", "ChartArea", "ChartNoAxesCombined", "RadarChart", "Waveform", "ChartNetwork"], "scope": "src/**/*.jsx", "expectedHits": 0, "note": "这些名字在 lucide-react 0.400 中不存在，import 会得到 undefined 并在渲染时报错。" }
+    ]
+  }
+}

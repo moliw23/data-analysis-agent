@@ -12,9 +12,9 @@ export const ID_NAME_PATTERN = /(身份证|证件号|证件|手机号|手机|电
 export const CODE_NAME_PATTERN = /(category|cat_|类目|分类|code|编码|性别|gender|标志|flag|type_id|group_id)/i
 // 备注类可选字段名：天然允许留空，缺失不算质量问题
 export const OPTIONAL_COL = /^(备注|说明|附言|留言|备注信息|评论|comment|note|remark)/i
-// 图表配色（ECharts option 共用）
-export const ACCENT = '#8B7EC8'
-export const PALETTE = ['#8B7EC8', '#8b5cf6', '#A99BD9', '#6B6577', '#C9B8EC', '#B0A4DD']
+// 图表配色（ECharts option 共用）——克制翡翠绿 + 中性高级色板，去除紫罗兰 AI 模板感
+export const ACCENT = '#15795B'
+export const PALETTE = ['#15795B', '#3E7CB1', '#C2923A', '#B0543F', '#5E8C61', '#8C7B5A']
 
 // ---------- 基础类型工具 ----------
 export function isNumeric(v) {
@@ -97,9 +97,9 @@ export function histogram(rows, key, bins = 10) {
 // ECharts 坐标轴/网格基础样式
 export function axisBase() {
   return {
-    axisLabel: { color: '#6B6577', fontSize: 11 },
-    axisLine: { lineStyle: { color: '#E8E5F0' } },
-    splitLine: { lineStyle: { color: '#E8E5F0' } }
+    axisLabel: { color: '#71717A', fontSize: 11 },
+    axisLine: { lineStyle: { color: '#E7E5E2' } },
+    splitLine: { lineStyle: { color: '#E7E5E2' } }
   }
 }
 // 自动粒度：跨度≤31天→day，月份差≤18→month，否则 year（与 timeSeries 内部 auto 逻辑一致）

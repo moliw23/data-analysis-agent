@@ -129,7 +129,7 @@ describe('Dashboard', () => {
     expect(p.onQuality).toHaveBeenCalled()
     fireEvent.click(screen.getByText('导出报告'))
     expect(p.onReport).toHaveBeenCalled()
-    fireEvent.click(screen.getByText('追问'))
+    fireEvent.click(screen.getByText('问数据'))
     expect(p.onChat).toHaveBeenCalled()
     fireEvent.click(screen.getByText('数据清洗'))
     expect(p.onClean).toHaveBeenCalled()

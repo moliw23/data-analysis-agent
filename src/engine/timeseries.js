@@ -167,14 +167,14 @@ export function forecastOption(train, fc, name) {
   return {
     grid: { left: 8, right: 14, top: 32, bottom: 8, containLabel: true },
     tooltip: { trigger: 'axis' },
-    legend: { data: ['实际', '预测'], top: 4, textStyle: { color: '#6B6577', fontSize: 11 } },
-    title: { text: name, left: 0, top: 0, textStyle: { fontSize: 13, color: '#2A2733', fontWeight: 600 } },
+    legend: { data: ['实际', '预测'], top: 4, textStyle: { color: '#71717A', fontSize: 11 } },
+    title: { text: name, left: 0, top: 0, textStyle: { fontSize: 13, color: '#27272A', fontWeight: 600 } },
     xAxis: { type: 'category', data: [...histCats, ...fcCats], ...axisBase(), axisLabel: { ...axisBase().axisLabel, rotate: (histCats.length + fcCats.length) > 10 ? 32 : 0, interval: 'auto' } },
     yAxis: { type: 'value', ...axisBase() },
     series: [
-      { name: '实际', type: 'line', data: [...histVals, ...fcCats.map(() => '-')], smooth: true, symbol: 'circle', symbolSize: 5, itemStyle: { color: ACCENT }, lineStyle: { width: 2, color: ACCENT }, areaStyle: { color: 'rgba(139,126,200,.08)' } },
+      { name: '实际', type: 'line', data: [...histVals, ...fcCats.map(() => '-')], smooth: true, symbol: 'circle', symbolSize: 5, itemStyle: { color: ACCENT }, lineStyle: { width: 2, color: ACCENT }, areaStyle: { color: 'rgba(21,121,91,.08)' } },
       { name: 'lo', type: 'line', data: [...hideHist(), connectVal, ...lo], stack: 'conf', symbol: 'none', lineStyle: { opacity: 0 }, areaStyle: { opacity: 0 }, silent: true, tooltip: { show: false } },
-      { name: 'hi', type: 'line', data: [...hideHist(), 0, ...hi.map((h, i) => Math.max(0, h - lo[i]))], stack: 'conf', symbol: 'none', lineStyle: { opacity: 0 }, areaStyle: { color: 'rgba(139,126,200,.18)' }, silent: true, tooltip: { show: false } },
+      { name: 'hi', type: 'line', data: [...hideHist(), 0, ...hi.map((h, i) => Math.max(0, h - lo[i]))], stack: 'conf', symbol: 'none', lineStyle: { opacity: 0 }, areaStyle: { color: 'rgba(21,121,91,.18)' }, silent: true, tooltip: { show: false } },
       { name: '预测', type: 'line', data: [...hideHist(), connectVal, ...fcVals], smooth: true, symbol: 'circle', symbolSize: 5, itemStyle: { color: '#E08A3C' }, lineStyle: { width: 2, color: '#E08A3C', type: 'dashed' } }
     ]
   }
@@ -187,7 +187,7 @@ export function anomalyOption(cats, vals, anomalies, name) {
   return {
     grid: { left: 8, right: 14, top: 32, bottom: 8, containLabel: true },
     tooltip: { trigger: 'axis' },
-    title: { text: name, left: 0, top: 0, textStyle: { fontSize: 13, color: '#2A2733', fontWeight: 600 } },
+    title: { text: name, left: 0, top: 0, textStyle: { fontSize: 13, color: '#27272A', fontWeight: 600 } },
     xAxis: { type: 'category', data: cats, boundaryGap: false, ...axisBase(), axisLabel: { ...axisBase().axisLabel, rotate: cats.length > 8 ? 32 : 0, interval: 'auto' } },
     yAxis: { type: 'value', ...axisBase() },
     series: [

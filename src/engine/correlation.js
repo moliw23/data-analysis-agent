@@ -78,7 +78,7 @@ export function heatmapOption(matrix, columns) {
     xAxis: {
       type: 'category', data: columns, splitArea: { show: true },
       axisLabel: {
-        color: '#6B6577', fontSize: xFontSize, rotate, interval: 0,
+        color: '#71717A', fontSize: xFontSize, rotate, interval: 0,
         hideOverlap: false,
         formatter: v => {
           // 超长列名截断，避免倾斜后仍占满
@@ -91,7 +91,7 @@ export function heatmapOption(matrix, columns) {
     yAxis: {
       type: 'category', data: columns, splitArea: { show: true },
       axisLabel: {
-        color: '#6B6577', fontSize: yFontSize, interval: 0,
+        color: '#71717A', fontSize: yFontSize, interval: 0,
         formatter: v => {
           const s = String(v)
           return s.length > 12 ? s.slice(0, 11) + '…' : s
@@ -103,18 +103,19 @@ export function heatmapOption(matrix, columns) {
       min: -1, max: 1, calculable: true, orient: 'horizontal',
       left: 'center', bottom: 6,
       itemWidth: 12, itemHeight: 12,  // horizontal：itemHeight 是色块厚度（px），旧值 120/140 太厚挤压网格
-      inRange: { color: ['#6B6577', '#E9E5F4', '#8B7EC8'] },
-      textStyle: { color: '#6B6577', fontSize: 11 }
+      // 色阶与文字色由 EChart.applyChartTheme 统一注入（与地图共用同一 accent 渐变），此处不写死颜色
+      textStyle: { fontSize: 11 }
     },
     series: [{
       type: 'heatmap', data,
       label: {
         show: n <= 8,
-        color: '#2A2733', fontSize: n > 6 ? 9 : 10,
+        // 标签色由 applyChartTheme 按当前主题注入（--fg），保证暗色下可读
+        fontSize: n > 6 ? 9 : 10,
         formatter: p => (Math.abs(p.data[2]) >= 0.99 ? '' : (p.data[2] >= 0 ? '+' : '') + p.data[2].toFixed(2))
       },
       itemStyle: { borderColor: '#fff', borderWidth: 1 },
-      emphasis: { itemStyle: { shadowBlur: 8, shadowColor: 'rgba(42,39,51,.25)' } }
+      emphasis: { itemStyle: { shadowBlur: 8, shadowColor: 'rgba(0,0,0,.25)' } }
     }]
   }
 }

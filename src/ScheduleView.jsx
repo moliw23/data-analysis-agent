@@ -123,7 +123,7 @@ export default function ScheduleView({ hasData, onRun }) {
         {history.map(h => (
           <div className="issue" key={h.id}>
             <div className="issue-body">
-              <div className="issue-title">{h.name} <span className="cron-preview" style={{ color: h.status === 'done' ? '#3a9d5d' : h.status === 'skipped' ? '#C98A2B' : '#C0564B' }}>{h.status === 'done' ? '已生成' : h.status === 'skipped' ? '跳过' : '失败'}</span></div>
+              <div className="issue-title">{h.name} <span className="cron-preview" style={{ color: h.status === 'done' ? 'var(--success)' : h.status === 'skipped' ? 'var(--warn)' : 'var(--danger)' }}>{h.status === 'done' ? '已生成' : h.status === 'skipped' ? '跳过' : '失败'}</span></div>
               <div className="issue-detail">{new Date(h.time).toLocaleString('zh-CN')}{h.caliber ? ` ｜ ${h.caliber}` : ''}{h.note ? ` ｜ ${h.note}` : ''}</div>
               {h.answers && h.answers.length > 0 && (
                 <div className="issue-fix">{h.answers.slice(0, 3).map(a => `· ${a.q}：${a.a.slice(0, 26)}${a.a.length > 26 ? '…' : ''}`).join('   ')}</div>

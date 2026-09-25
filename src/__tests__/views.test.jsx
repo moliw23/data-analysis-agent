@@ -16,7 +16,7 @@ describe('Home 视图', () => {
   it('渲染标题与入口按钮，点击触发回调', () => {
     const onUpload = vi.fn(), onSample = vi.fn(), onSchedule = vi.fn(), onSettings = vi.fn()
     render(<Home onUpload={onUpload} onSample={onSample} onSchedule={onSchedule} onSettings={onSettings} llmOn={false} />)
-    expect(screen.getByText('数据分析 Agent')).toBeTruthy()
+    expect(screen.getByText('数据分析工作台')).toBeTruthy()
     expect(screen.getByText(/上传多源数据/)).toBeTruthy() // 能力清单渲染
     fireEvent.click(screen.getByRole('button', { name: '上传 / 接入数据' }))
     expect(onUpload).toHaveBeenCalledTimes(1)
@@ -90,7 +90,7 @@ describe('ChartToolbox 工具箱', () => {
   it('渲染模式 tab，切换 Top N 不崩溃', () => {
     const onGenerate = vi.fn(), onClose = vi.fn()
     render(<ChartToolbox table={T} onGenerate={onGenerate} onClose={onClose} />)
-    expect(screen.getByText('智能推荐')).toBeTruthy()
+    expect(screen.getByText('图表推荐')).toBeTruthy()
     fireEvent.click(screen.getByText('Top N 排行'))
     expect(screen.getByText('Top N 排行')).toBeTruthy() // 切换后仍在（激活态）
   })

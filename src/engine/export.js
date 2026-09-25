@@ -1,5 +1,18 @@
 // 报告导出（独立 HTML，含 ECharts CDN + 内联 SVG 图标，可离线查看）与数据导出（CSV / Excel）
 import { fmt } from './_shared.js'
+// 令牌解析：报告 HTML 是独立产物，无法引用应用的 CSS 变量，
+// 因此在生成时刻从 design-tokens.css 解析具体色值（与界面同源）。
+// fallback 仅作非浏览器环境（单测/node）兜底，不是颜色来源。
+function TK(name, fallback) {
+  try {
+    if (typeof document !== 'undefined' && window.getComputedStyle) {
+      const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+      if (v) return v
+    }
+  } catch { /* node 环境走 fallback */ }
+  return fallback
+}
+
 
 // 从 lucide-react v0.400.0 提取的 SVG path 数据
 const ICON_SVG = {
@@ -51,23 +64,23 @@ export async function exportReportHTML(table, analysis, quality) {
     : ''
   return `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>数据分析报告</title>
 <script>${echartsSource}</script>
-<style>body{font-family:-apple-system,"PingFang SC",sans-serif;color:#2A2733;max-width:880px;margin:0 auto;padding:24px;background:#FAF9FC}
-h1{font-size:22px;margin:0 0 4px} .sub{color:#6B6577;font-size:13px;margin-bottom:20px}
-.sample-note{background:#F7F5FB;border:1px solid #E8E5F0;border-radius:8px;padding:8px 12px;font-size:12px;color:#6B6577;margin:-8px 0 16px}
-.card{background:#fff;border:1px solid #E8E5F0;border-radius:16px;padding:16px;margin:12px 0}
-h2{font-size:16px;margin:0 0 10px;display:flex;align-items:center;gap:6px} h2 svg{color:#8B7EC8}
-ul{padding-left:18px} li{margin:8px 0;font-size:14px} .cal{color:#6B6577;font-size:12px}
-.insight-item{display:flex;gap:8px;align-items:flex-start} .insight-item svg{color:#8B7EC8;flex-shrink:0;margin-top:2px}
+<style>body{font-family:-apple-system,"PingFang SC",sans-serif;color:${TK('--fg', '#27272A')};max-width:880px;margin:0 auto;padding:24px;background:${TK('--bg', '#FAFAF9')}}
+h1{font-size:22px;margin:0 0 4px} .sub{color:${TK('--muted', '#71717A')};font-size:13px;margin-bottom:20px}
+.sample-note{background:${TK('--n-100', '#F4F4F2')};border:1px solid ${TK('--border', '#E7E5E2')};border-radius:8px;padding:8px 12px;font-size:12px;color:${TK('--muted', '#71717A')};margin:-8px 0 16px}
+.card{background:#fff;border:1px solid ${TK('--border', '#E7E5E2')};border-radius:16px;padding:16px;margin:12px 0}
+h2{font-size:16px;margin:0 0 10px;display:flex;align-items:center;gap:6px} h2 svg{color:${TK('--accent', '#15795B')}}
+ul{padding-left:18px} li{margin:8px 0;font-size:14px} .cal{color:${TK('--muted', '#71717A')};font-size:12px}
+.insight-item{display:flex;gap:8px;align-items:flex-start} .insight-item svg{color:${TK('--accent', '#15795B')};flex-shrink:0;margin-top:2px}
 .issue-item{display:flex;gap:8px;align-items:flex-start} .issue-item .sev{width:8px;min-width:8px;min-height:20px;border-radius:9999px;margin-top:6px}
-.sev-high{background:#C0564B} .sev-medium{background:#C98A2B} .sev-low{background:#8B7EC8} .sev-info{background:#9AA0A6}
-.fix{color:#8B7EC8;font-size:12px} .muted{color:#6B6577}
+.sev-high{background:${TK('--danger', '#B23A31')}} .sev-medium{background:${TK('--warn', '#96631A')}} .sev-low{background:${TK('--accent', '#15795B')}} .sev-info{background:${TK('--n-400', '#A6A39C')}}
+.fix{color:${TK('--accent', '#15795B')};font-size:12px} .muted{color:${TK('--muted', '#71717A')}}
 .chart{height:280px;margin:8px 0} table{border-collapse:collapse;width:100%;font-size:12px}
-.preview-table-wrap{overflow-x:auto;max-width:100%;border:1px solid #E8E5F0;border-radius:6px}
+.preview-table-wrap{overflow-x:auto;max-width:100%;border:1px solid ${TK('--border', '#E7E5E2')};border-radius:6px}
 .preview-table-wrap table{table-layout:auto;min-width:100%;white-space:nowrap}
-.preview-table-wrap th,.preview-table-wrap td{border:1px solid #E8E5F0;padding:4px 8px;text-align:left;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.preview-table-wrap th{background:#F5F2FB;font-weight:600;position:sticky;top:0;z-index:1}
-.preview-table-wrap tbody tr:nth-child(even) td{background:#FBF9FF}
-.score{display:inline-block;width:48px;height:48px;border-radius:50%;border:3px solid #8B7EC8;color:#8B7EC8;font-weight:700;text-align:center;line-height:42px}</style></head>
+.preview-table-wrap th,.preview-table-wrap td{border:1px solid ${TK('--border', '#E7E5E2')};padding:4px 8px;text-align:left;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preview-table-wrap th{background:${TK('--n-100', '#F4F4F2')};font-weight:600;position:sticky;top:0;z-index:1}
+.preview-table-wrap tbody tr:nth-child(even) td{background:${TK('--accent-wash', 'transparent')}}
+.score{display:inline-block;width:48px;height:48px;border-radius:50%;border:3px solid ${TK('--accent', '#15795B')};color:${TK('--accent', '#15795B')};font-weight:700;text-align:center;line-height:42px}</style></head>
 <body>
 <h1>数据分析报告</h1><div class="sub">生成时间：${new Date().toLocaleString('zh-CN')} ｜ 数据 ${table.rows.length} 行 × ${table.columns.length} 列 ｜ 保真模式：真实计算（Mock 引擎）</div>
 ${sampleNote}

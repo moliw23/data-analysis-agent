@@ -45,9 +45,9 @@ function Home({ onUpload, onSample, onSchedule, onSettings, llmOn }) {
   const caps = [
     { ic: UploadIcon, t: '上传多源数据', d: 'CSV / Excel / JSON / 日志 / API，自动解析归一' },
     { ic: AlertTriangle, t: '数据质量诊断', d: '缺失、异常、类型冲突自动检出并给修复建议' },
-    { ic: BarChart2, t: '自动可视化出图', d: '按数据语义（或 LLM 规划）生成最合适的图表' },
+    { ic: BarChart2, t: '自动可视化出图', d: '按数据语义自动生成最合适的图表' },
     { ic: Sparkles, t: '实质化分析建议', d: '每个数字可回溯，每条建议带口径说明' },
-    { ic: MessageCircle, t: '对话式追问', d: '围绕数据集持续追问，答案由真实统计支撑' },
+    { ic: MessageCircle, t: '数据问答', d: '围绕数据集持续提问，答案由真实统计支撑' },
     { ic: FileText, t: '一键报告导出', d: 'HTML / PDF / Word，图表 + 结论可分享' },
     { ic: Clock, t: '定时调度', d: '定时报表配置（推送通道待部署后接入）' },
   ]
@@ -55,10 +55,10 @@ function Home({ onUpload, onSample, onSchedule, onSettings, llmOn }) {
     <div className="screen">
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div>
-          <div className="screen-title">数据分析 Agent</div>
+          <div className="screen-title">数据分析工作台</div>
           <p className="screen-desc">上传数据，得到敢签字的结论——每个数字可回溯到计算。</p>
         </div>
-        <button className="icon-btn" title={llmOn ? 'LLM 已接入，点击配置' : '接入真实 LLM'} onClick={onSettings}>
+        <button className="icon-btn" title={llmOn ? '模型已接入，点击配置' : '接入分析模型'} onClick={onSettings}>
           {llmOn ? <Zap size={20} /> : <ZapOff size={20} />}
         </button>
       </div>
@@ -166,7 +166,7 @@ function Upload({ onFile, onSample, fileRef, table, fileName, baseTable, baseFil
             <div className="stream-progress card" style={{ marginTop: 10 }}>
               <div className="stream-line">
                 <span>
-                  {streamState.phase === 'done' ? '✅ 解析完成' : '正在流式解析（Web Worker 不卡界面）…'}
+                  {streamState.phase === 'done' ? <span className="inline-ok"><CheckCircle2 size={14} /> 解析完成</span> : '正在流式解析（Web Worker 不卡界面）…'}
                   「{streamState.fileName}」
                 </span>
                 <span className="stream-count">
@@ -381,7 +381,7 @@ function Upload({ onFile, onSample, fileRef, table, fileName, baseTable, baseFil
       )}
 
       <button className="btn btn-ghost" onClick={onSample}><Database size={18} /> 使用示例数据快速体验</button>
-      <p className="screen-desc">提示：未配置 LLM 时为可离线运行的规则引擎；在首页右上角接入真实 LLM 后，图表规划与结论叙述自动升级。</p>
+      <p className="screen-desc">提示：未配置模型时为可离线运行的规则引擎；在首页右上角接入分析模型后，图表规划与结论叙述自动升级。</p>
     </div>
   )
 }
@@ -420,7 +420,7 @@ function Dashboard({ result, quality, aiMode, onChart, onQuality, onReport, onCh
       </div>
 
       <div className="card">
-        <div className="card-title"><Sparkles size={16} /> AI 分析结论与建议 {aiMode === 'llm' ? <span className="badge-ai">LLM 生成 · 数字经引擎真实计算</span> : <span className="badge-mock">规则引擎</span>}{result.sampled && result.sampled.enabled && <span className="badge-sample">采样统计</span>}</div>
+        <div className="card-title"><Sparkles size={16} /> 分析结论与建议 {aiMode === 'llm' ? <span className="badge-ai">引擎生成 · 数字经引擎真实计算</span> : <span className="badge-mock">规则引擎</span>}{result.sampled && result.sampled.enabled && <span className="badge-sample">采样统计</span>}</div>
         <div className="insight-list">
           {result.insights.map((it, i) => {
             const Ic = INSIGHT_ICON[it.icon] || Sparkles
@@ -485,7 +485,7 @@ function Dashboard({ result, quality, aiMode, onChart, onQuality, onReport, onCh
           <div className="chart-card" key={c.id}>
             <div className="chart-head">
               <span className="chart-title">{c.title}</span>
-              <span className="badge-ai">{c.manual ? '手动生成' : (aiMode === 'llm' ? 'LLM 规划' : 'AI 生成')}</span>
+              <span className="badge-ai">{c.manual ? '手动生成' : (aiMode === 'llm' ? '自动规划' : '自动生成')}</span>
               {c.caliber && (
                 <span className="chart-tip-wrap" tabIndex={0} aria-label="查看备注">
                   <HelpCircle size={14} className="chart-tip-icon" />
@@ -506,7 +506,7 @@ function Dashboard({ result, quality, aiMode, onChart, onQuality, onReport, onCh
         <button className="btn btn-ghost" onClick={onTemplate}><BookmarkPlus size={18} /> 模板库</button>
         <button className="btn btn-ghost" onClick={onClean}><Eraser size={18} /> 数据清洗</button>
         <button className="btn btn-ghost" onClick={onReport}><FileText size={18} /> 导出报告</button>
-        <button className="btn btn-primary" onClick={onChat}><MessageCircle size={18} /> 追问</button>
+        <button className="btn btn-primary" onClick={onChat}><MessageCircle size={18} /> 问数据</button>
         <button className="btn btn-ghost" onClick={onSchedule}><Clock size={18} /> 定时调度</button>
         {canUndoClean && <button className="btn btn-ghost" onClick={onUndoClean}><RotateCcw size={18} /> 回退清洗</button>}
       </div>
@@ -607,7 +607,7 @@ function SettingsPanel({ theme, setTheme, onSaved }) {
         <div className="screen-desc" style={{ marginTop: 8 }}>暗色模式仅切换视觉层，不重跑分析；偏好自动保存。</div>
       </div>
       <div className="card">
-        <div className="card-title"><Settings size={16} /> 接入真实 LLM（OpenAI 兼容接口）</div>
+        <div className="card-title"><Settings size={16} /> 接入分析模型（OpenAI 兼容接口）</div>
         <div className="form-row">
           <label className="form-label">Base URL</label>
           <input className="form-input" value={baseUrl} placeholder="https://api.openai.com 或其他兼容网关" onChange={e => setBaseUrl(e.target.value)} />
@@ -646,7 +646,7 @@ function SettingsPanel({ theme, setTheme, onSaved }) {
       <div className="card">
         <div className="card-title"><ListChecks size={16} /> 使用说明与边界</div>
         <div className="insight-list">
-          <div className="insight"><div className="insight-ic"><Sparkles size={16} /></div><div><div className="insight-tx">LLM 只做「选图表、解意图、写结论」三件事，所有数字仍由本地引擎真实计算，可回溯口径。</div></div></div>
+          <div className="insight"><div className="insight-ic"><Sparkles size={16} /></div><div><div className="insight-tx">分析模型只做「选图表、解意图、写结论」三件事，所有数字仍由本地引擎真实计算，可回溯口径。</div></div></div>
           <div className="insight"><div className="insight-ic"><AlertTriangle size={16} /></div><div><div className="insight-tx">Key 仅存本机浏览器 localStorage，不会上传到我们的服务器；请勿使用生产环境高权限 Key。浏览器直连要求接口开放 CORS。</div></div></div>
           <div className="insight"><div className="insight-ic"><ZapOff size={16} /></div><div><div className="insight-tx">未配置或调用失败时自动降级为内置规则引擎，全流程依然可用（离线亦可）。</div></div></div>
         </div>
@@ -663,7 +663,7 @@ function ChatPanel({ messages, onClose, onSend, suggestions }) {
   return (
     <div className="chat-panel">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <div className="card-title" style={{ margin: 0 }}><MessageCircle size={16} /> 围绕这份数据追问</div>
+        <div className="card-title" style={{ margin: 0 }}><MessageCircle size={16} /> 围绕这份数据提问</div>
         <button className="icon-btn" style={{ width: 36, height: 36 }} onClick={onClose}><ArrowLeft size={18} /></button>
       </div>
       <div className="chat-msgs" ref={msgsRef}>

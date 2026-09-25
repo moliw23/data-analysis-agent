@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Download, Sheet, FileSpreadsheet, Sparkles, TrendingUp, BarChart2, Layers, PieChart, GitCompare, Activity } from 'lucide-react'
+import { Download, Sheet, FileSpreadsheet, Sparkles, TrendingUp, BarChart2, Layers, PieChart, GitCompare, Activity, BarChart3 } from 'lucide-react'
 import { exportTableCSV, exportTableXLSX, fmt } from '../engine.js'
 
 // ---------- ECharts 封装 ----------
@@ -38,6 +38,22 @@ function matchRegion(rawName, featureNames) {
   }
   return null
 }
+// 运行时解析 design-tokens.css 的令牌值（ECharts 画在 canvas 上，读不到 CSS 变量）。
+// 主题切换（themechange 事件）后会重新解析并 setOption，因此令牌变更即时生效。
+// fallback 仅作解析失败兜底，不是颜色来源——正常路径一律走令牌。
+export function resolveToken(name, fallback) {
+  if (typeof window === 'undefined' || !window.getComputedStyle) return fallback
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return v || fallback
+}
+function accentGradient() {
+  return [
+    resolveToken('--accent-50', '#EDF7F1'),
+    resolveToken('--accent-200', '#BEE0CC'),
+    resolveToken('--accent-400', '#5DA894'),
+    resolveToken('--accent-600', '#15795B'),
+  ]
+}
 function buildChinaOption(opt) {
   const featureNames = (_chinaGeo && _chinaGeo.features || []).map(f => (f.properties && f.properties.name) || '').filter(Boolean)
   const remap = opt.data.map(d => {
@@ -45,19 +61,20 @@ function buildChinaOption(opt) {
     return { name: fn || d.name, value: d.value }
   })
   const max = opt.max || Math.max(...opt.data.map(d => d.value), 0)
+  // 注意：visualMap 色阶、地图强调色、文字色全部由 applyChartTheme 统一注入（见下），
+  // 此处不写死颜色，避免与应用主题脱节。
   return {
     tooltip: { trigger: 'item', formatter: p => `${p.name}<br/>${opt.measureCol}：${fmt(p.value)}` },
-    visualMap: { min: 0, max, left: 'left', bottom: 12, text: ['高', '低'], calculable: true, inRange: { color: ['#ECE7F7', '#B9A9E6', '#8B7EC8', '#5B4B8A'] }, textStyle: { color: '#6B6577', fontSize: 11 } },
+    visualMap: { min: 0, max, left: 'left', bottom: 12, text: ['高', '低'], calculable: true, textStyle: { fontSize: 11 } },
     series: [{
       type: 'map', map: 'china', roam: true, data: remap,
       label: { show: false }, itemStyle: { borderColor: '#fff', borderWidth: 0.5 },
-      emphasis: { label: { show: true, color: '#2A2733' }, itemStyle: { areaColor: '#8B7EC8' } }
     }]
   }
 }
 function mapFallbackOption(msg) {
   return {
-    title: { text: '地图底图加载失败', subtext: '需联网加载中国地图 GeoJSON（' + (msg || '未知错误') + '）', left: 'center', top: 'center', textStyle: { color: '#d35400', fontSize: 14 }, subtextStyle: { color: '#6B6577' } },
+    title: { text: '地图底图加载失败', subtext: '需联网加载中国地图 GeoJSON（' + (msg || '未知错误') + '）', left: 'center', top: 'center', textStyle: { fontSize: 14 } },
     series: []
   }
 }
@@ -73,13 +90,17 @@ function deepClone(v, seen = new WeakMap()) {
   return out
 }
 
-// 按主题给图表上色：把标题/坐标轴/图例/visualMap 的硬编码浅色替换为当前主题色，避免暗色下文字不可见。
+// 按主题给图表上色：标题/坐标轴/图例/visualMap/热力图标签统一从令牌解析，
+// 避免暗色下文字不可见，也保证图表与应用是同一套颜色。
 // 仅作用于克隆体，不修改缓存的 option。
 function applyChartTheme(opt, isDark) {
   if (!opt) return opt
-  const c = isDark
-    ? { text: '#E9E6F0', sub: '#A39DB5', axis: '#7C7689', split: 'rgba(163,157,181,0.16)' }
-    : { text: '#2A2733', sub: '#6B6577', axis: '#9a94a8', split: 'rgba(42,39,51,0.08)' }
+  const c = {
+    text: resolveToken('--fg', isDark ? '#ECEAE3' : '#27272A'),
+    sub: resolveToken('--muted', isDark ? '#9C978D' : '#71717A'),
+    axis: resolveToken('--chart-axis', isDark ? '#6A6E75' : '#A1A1AA'),
+    split: resolveToken('--chart-grid', isDark ? 'rgba(255,255,255,0.08)' : 'rgba(24,24,27,0.07)'),
+  }
   const o = deepClone(opt)
   if (o.title) o.title.textStyle = { ...(o.title.textStyle || {}), color: c.text }
   for (const k of ['xAxis', 'yAxis']) {
@@ -93,7 +114,23 @@ function applyChartTheme(opt, isDark) {
     })
   }
   if (o.legend && o.legend.textStyle) o.legend.textStyle.color = c.sub
-  if (o.visualMap && o.visualMap.textStyle) o.visualMap.textStyle.color = c.sub
+  // visualMap：文字色 + 连续色阶统一走令牌（地图与相关性热力图共用同一渐变，保证视觉一致）
+  if (o.visualMap) {
+    if (o.visualMap.textStyle) o.visualMap.textStyle.color = c.sub
+    o.visualMap.inRange = { ...(o.visualMap.inRange || {}), color: accentGradient() }
+  }
+  // 地图 / 热力图系列的强调色与标签色由主题注入（来源组件不再自带颜色）
+  for (const s of (o.series || [])) {
+    if (!s) continue
+    if (s.type === 'map') {
+      s.emphasis = {
+        ...(s.emphasis || {}),
+        label: { ...((s.emphasis && s.emphasis.label) || {}), show: true, color: c.text },
+        itemStyle: { ...((s.emphasis && s.emphasis.itemStyle) || {}), areaColor: resolveToken('--accent-600', '#15795B') },
+      }
+    }
+    if (s.type === 'heatmap' && s.label) s.label = { ...s.label, color: c.text }
+  }
   o.backgroundColor = 'transparent'
   return o
 }
@@ -167,7 +204,7 @@ function EChart({ option, height, mobileHeight, kind, downloadable = false, file
   const handleDownload = () => {
     if (!chartRef.current) return
     try {
-      const bg = isDarkRef.current ? '#1F1B28' : '#ffffff'
+      const bg = resolveToken('--bg', isDarkRef.current ? '#121314' : '#ffffff')
       const url = chartRef.current.getDataURL({ type: 'png', pixelRatio: 2, backgroundColor: bg })
       const a = document.createElement('a')
       a.href = url
@@ -183,7 +220,7 @@ function EChart({ option, height, mobileHeight, kind, downloadable = false, file
     return (
       <div className="echart-wrap" style={{ position: 'relative', width: '100%' }}>
         <div className="echart-empty" style={{ height: h }}>
-          <div className="echart-empty-icon">📊</div>
+          <BarChart3 size={32} className="echart-empty-icon" />
           <div className="echart-empty-text">样本不足，无法绘制图表</div>
           <div className="echart-empty-sub">当前数据缺少可绘制的有效点（少于 1 个）</div>
         </div>

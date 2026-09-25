@@ -1,7 +1,7 @@
 // 分析模板库 UI（模块③）：新建/保存/加载/重命名/删除/导入/导出
 // 模板 = 可复用的图表配置（spec）+ 表结构指纹；应用时按语义角色映射到当前数据集
 import { useState, useRef } from 'react'
-import { X, BookmarkPlus, RefreshCw, Trash2, Download, Upload, AlertTriangle, Info } from 'lucide-react'
+import { X, BookmarkPlus, RefreshCw, Trash2, Download, Upload, AlertTriangle, Info, Pencil } from 'lucide-react'
 import { inferSchema, looksLikeId } from './engine.js'
 import {
   listTemplates, saveTemplate, deleteTemplate, renameTemplate,
@@ -235,7 +235,7 @@ export default function TemplateLibrary({ table, activeFilters, onApply, onClose
               )}
               <div className="tpl-item-ops">
                 <button className="icon-btn" title="应用到当前数据集" onClick={() => handleApply(t)}><RefreshCw size={15} /></button>
-                <button className="icon-btn" title="重命名" onClick={() => setRenaming({ id: t.id, name: t.name })}>✎</button>
+                <button className="icon-btn" title="重命名" onClick={() => setRenaming({ id: t.id, name: t.name })} aria-label="重命名模板"><Pencil size={14} strokeWidth={1.5} /></button>
                 <button className="icon-btn" title="导出 .json" onClick={() => exportTemplateJson(t)}><Download size={15} /></button>
                 <button className="icon-btn" title="删除" onClick={() => { if (window.confirm('删除模板「' + t.name + '」？')) { deleteTemplate(t.id); refresh() } }}><Trash2 size={15} /></button>
               </div>
