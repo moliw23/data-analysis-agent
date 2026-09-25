@@ -1,0 +1,3 @@
+# 聚合入口：core + rag。若 rag 安装失败，请单独装 requirements-core.txt
+-r requirements-core.txt
+-r requirements-rag.txt

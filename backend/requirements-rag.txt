@@ -1,0 +1,6 @@
+# RAG 依赖（本波只写文件，不安装 —— chromadb 会拉 31 个包，见 docs/02-架构.md §3.3）
+# 装失败时自动降级到 SQLite FTS5 关键词检索，核心功能不受影响。
+chromadb>=1.0,<2.0
+langchain-text-splitters>=1.0,<2.0
+pypdf>=5.0,<7.0
+python-docx>=1.1,<2.0

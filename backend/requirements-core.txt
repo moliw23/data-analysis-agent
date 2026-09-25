@@ -1,0 +1,11 @@
+# 核心依赖（本波只装这一份，即可启动 LLM 网关 + 隐私档位）
+# 版本锚定格式 >=floor,<ceiling，防 pip 拉到破坏性新版。见 docs/02-架构.md §3.2
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<0.60
+pydantic>=2.9,<3.0
+pydantic-settings>=2.4,<3.0
+sqlalchemy>=2.0.36,<2.1
+apscheduler>=3.10,<4.0
+httpx>=0.27,<0.29
+python-multipart>=0.0.9,<0.1
+cryptography>=43,<51
