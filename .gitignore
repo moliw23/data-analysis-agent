@@ -55,3 +55,4 @@ __pycache__/
 *.pyc
 offline-report.html
 .qa/
+backend/e2e_tmp.csv
