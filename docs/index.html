@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>data-analysis-agent · 纯前端数据分析智能体</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f8fc;
+    --card: #ffffff;
+    --ink: #1f2733;
+    --muted: #64748b;
+    --line: #e6ebf2;
+    --brand: #4f6ef7;
+    --brand-2: #7c3aed;
+    --accent: #0ea5e9;
+    --ok: #16a34a;
+    --shadow: 0 1px 3px rgba(16,24,40,.06), 0 8px 24px rgba(16,24,40,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.65;
+  }
+  a { color: var(--brand); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px 64px; }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, #4f6ef7 0%, #7c3aed 60%, #0ea5e9 100%);
+    color: #fff;
+    padding: 56px 20px 48px;
+    text-align: center;
+  }
+  header h1 { margin: 0 0 8px; font-size: 34px; letter-spacing: .5px; }
+  header p { margin: 0 auto; max-width: 720px; opacity: .94; font-size: 16px; }
+  .badges { margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.28);
+    padding: 5px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    backdrop-filter: blur(4px);
+  }
+
+  /* Sections */
+  section { margin-top: 40px; }
+  h2 {
+    font-size: 22px; margin: 0 0 16px; padding-left: 12px;
+    border-left: 4px solid var(--brand);
+  }
+  h2 .em { margin-right: 8px; }
+
+  /* KPI cards */
+  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .kpi {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px 16px; box-shadow: var(--shadow); text-align: center;
+  }
+  .kpi .num { font-size: 30px; font-weight: 800; color: var(--brand); }
+  .kpi .lab { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  /* Feature grid */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .feat {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px; box-shadow: var(--shadow);
+  }
+  .feat .t { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+  .feat .d { font-size: 13px; color: var(--muted); }
+
+  /* Lists */
+  .findings { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 22px; box-shadow: var(--shadow); }
+  .findings li { margin: 8px 0; }
+
+  /* Diagram */
+  pre.diagram {
+    background: #0f172a; color: #cbd5e1; border-radius: 14px; padding: 20px;
+    overflow-x: auto; font-size: 13px; line-height: 1.45; box-shadow: var(--shadow);
+  }
+
+  /* Chart */
+  #chart { width: 100%; height: 320px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  th { background: #f1f5fb; color: #475569; font-weight: 700; }
+  tr:last-child td { border-bottom: none; }
+
+  /* Code */
+  pre.code {
+    background: #0f172a; color: #e2e8f0; padding: 16px 18px; border-radius: 14px;
+    overflow-x: auto; font-size: 13.5px; box-shadow: var(--shadow);
+  }
+  code.in { background: #eef2ff; color: #4338ca; padding: 2px 6px; border-radius: 6px; font-size: 13px; }
+
+  /* Tree */
+  pre.tree { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; overflow-x: auto; font-size: 13px; box-shadow: var(--shadow); color: #334155; }
+
+  footer { margin-top: 48px; text-align: center; color: var(--muted); font-size: 13px; }
+  @media (max-width: 760px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📊 data-analysis-agent</h1>
+  <p>一个<strong>纯前端、零后端</strong>的数据分析智能体：数据在浏览器内完成接入、清洗、分析、可视化与报告导出，全程不出本地。规则引擎 + 流式 LLM 双轮驱动。</p>
+  <div class="badges">
+    <span class="badge">🧪 156 项单测全绿</span>
+    <span class="badge">📈 行覆盖 56.7%+</span>
+    <span class="badge">⚡ React 18 + Vite 5</span>
+    <span class="badge">🪪 MIT License</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- 概览卡片 -->
+  <section>
+    <h2><span class="em">🧭</span>概览</h2>
+    <div class="kpis">
+      <div class="kpi"><div class="num">156</div><div class="lab">单元测试（14 文件，全绿）</div></div>
+      <div class="kpi"><div class="num">14</div><div class="lab">分析引擎模块</div></div>
+      <div class="kpi"><div class="num">9</div><div class="lab">ECharts 可视化图表类型</div></div>
+      <div class="kpi"><div class="num">7</div><div class="lab">类数据源接入（CSV/Excel/JSON/日志/API/数据库/多表）</div></div>
+    </div>
+  </section>
+
+  <!-- 核心能力 -->
+  <section>
+    <h2><span class="em">💡</span>核心能力</h2>
+    <ul class="findings">
+      <li><strong>纯前端零后端</strong>：全部分析在浏览器内完成，原始数据存 IndexedDB，<strong>不出本地</strong>，无隐私外泄风险。</li>
+      <li><strong>规则 + LLM 双引擎</strong>：确定性分析规则（质量评分 / 洞察 / 同环比 / 预测 / 异常）叠加流式 LLM（追问、清洗建议、报告润色）。</li>
+      <li><strong>交互式看板</strong>：9 种图表自动生成，支持筛选下钻、图表详情、质量分总览。</li>
+      <li><strong>多表关联 / 联合分析 / 透视</strong>：把多份 CSV/Excel 关联成一张宽表再分析。</li>
+      <li><strong>内置 SQL 引擎</strong>：通过 alasql 直接在浏览器跑 SQL 查询。</li>
+      <li><strong>一键导出 PPTX 报告</strong>：看板 + 洞察直接生成可演示的幻灯片。</li>
+    </ul>
+  </section>
+
+  <!-- 功能特性 -->
+  <section>
+    <h2><span class="em">✨</span>功能特性</h2>
+    <div class="grid">
+      <div class="feat"><div class="t">📊 数据可视化看板</div><div class="d">9 种 ECharts 图表 + 质量分 + 洞察 + 筛选下钻</div></div>
+      <div class="feat"><div class="t">📥 多源数据接入</div><div class="d">CSV / Excel / JSON / 日志 / API / 数据库 / 多表关联</div></div>
+      <div class="feat"><div class="t">🧠 智能分析</div><div class="d">质量评分 · 洞察 · 同环比 · 预测 · 异常检测</div></div>
+      <div class="feat"><div class="t">🧹 数据清洗</div><div class="d">缺失值 / 异常值 / 去重 / 类型修正，带影响预览</div></div>
+      <div class="feat"><div class="t">📋 模板库</div><div class="d">保存 / 套用 / 重命名 / 删除 / 导出分析模板</div></div>
+      <div class="feat"><div class="t">⏰ 定时任务</div><div class="d">自动跑分析并推送（问题 · 通道可配）</div></div>
+      <div class="feat"><div class="t">📄 报告导出</div><div class="d">看板 + 洞察一键导出 PPTX</div></div>
+      <div class="feat"><div class="t">💬 对话式分析</div><div class="d">OpenAI 兼容 LLM 流式接入，边生成边看</div></div>
+      <div class="feat"><div class="t">🗄️ 本地持久化</div><div class="d">IndexedDB 存原始行 + localStorage 存配置</div></div>
+    </div>
+  </section>
+
+  <!-- 示例图 -->
+  <section>
+    <h2><span class="em">📈</span>示例看板（区域销售额）</h2>
+    <div id="chart"></div>
+  </section>
+
+  <!-- 架构 -->
+  <section>
+    <h2><span class="em">🏗️</span>系统架构</h2>
+    <pre class="diagram">
+┌──────────────────────────────────────────────────────┐
+│                  浏览器 (React 18 SPA)                │
+│        9 个视图 + ECharts 看板 + 对话式分析            │
+└───────────────────────┬──────────────────────────────┘
+                        │ Zustand actions
+┌───────────────────────▼──────────────────────────────┐
+│             全局状态 (Zustand store)                  │
+│      数据集 / 筛选 / 缓存 / 模板 / 定时任务            │
+└───────────────┬────────────────────────┬──────────────┘
+                │                        │
+                ▼                        ▼
+┌──────────────────────────┐  ┌──────────────────────────┐
+│    分析引擎 src/engine    │  │    LLM 流式接入           │
+│ analyze / timeseries /   │  │   OpenAI 兼容接口         │
+│ manualChart / sql / join │  │   洞察 / 追问 / 清洗建议   │
+│ /clean / correlation /   │  └──────────────────────────┘
+│ pivot / merge / schema   │
+└───────────────┬──────────┘
+                │
+                ▼
+┌──────────────────────────┐  ┌──────────────────────────┐
+│    数据接入层             │  │   持久化                 │
+│  xlsx / Web Worker 流式   │  │   IndexedDB + localStorage│
+│  日志 / API / 数据库 /    │  └──────────────────────────┘
+│  多表关联                 │
+└──────────────────────────┘
+    </pre>
+  </section>
+
+  <!-- 技术栈 -->
+  <section>
+    <h2><span class="em">🛠️</span>技术栈</h2>
+    <table>
+      <thead><tr><th>类别</th><th>技术</th></tr></thead>
+      <tbody>
+        <tr><td>前端框架</td><td>React 18.3 · React-DOM 18.3</td></tr>
+        <tr><td>构建工具</td><td>Vite 5.3（@vitejs/plugin-react）+ manualChunks 分包</td></tr>
+        <tr><td>状态管理</td><td>Zustand 4.5</td></tr>
+        <tr><td>数据可视化</td><td>ECharts 5.5（动态 import 代码分割）</td></tr>
+        <tr><td>SQL 引擎</td><td>alasql 4.18（浏览器内 SQL）</td></tr>
+        <tr><td>数据解析</td><td>xlsx 0.18（SheetJS）+ Web Worker 流式解析</td></tr>
+        <tr><td>报告导出</td><td>pptxgenjs 3.12</td></tr>
+        <tr><td>图标</td><td>lucide-react 0.400</td></tr>
+        <tr><td>持久化</td><td>IndexedDB + localStorage</td></tr>
+        <tr><td>AI 接入</td><td>OpenAI 兼容 /chat/completions（流式）</td></tr>
+        <tr><td>测试</td><td>Vitest 2.1 · @testing-library/react 16 · jsdom 25 · @vitest/coverage-v8</td></tr>
+        <tr><td>质量</td><td>ESLint 8.57 · Prettier 3.9</td></tr>
+        <tr><td>CI</td><td>GitHub Actions（lint → test → build）</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 快速开始 -->
+  <section>
+    <h2><span class="em">🚀</span>快速开始</h2>
+    <pre class="code"># 安装依赖
+npm install
+
+# 启动开发服务器（http://localhost:5173）
+npm run dev
+
+# 运行测试（156 项）
+npm test
+
+# 生成覆盖率报告（coverage/index.html）
+npm run coverage
+
+# 构建生产包（dist/）
+npm run build</pre>
+  </section>
+
+  <!-- 目录结构 -->
+  <section>
+    <h2><span class="em">📂</span>目录结构</h2>
+    <pre class="tree">
+data-analysis-agent/
+├── src/
+│   ├── engine/                 # 分析引擎（14 模块）
+│   │   ├── analyze.js          # 规则引擎 + 意图执行
+│   │   ├── timeseries.js       # 时间序列 / 同环比 / 预测 / 异常
+│   │   ├── manualChart.js      # 9 种手动图表
+│   │   ├── charts.js           # 图表 option 生成
+│   │   ├── schema.js           # 列推断 inferSchema / columnProfile
+│   │   ├── clean.js            # 数据清洗
+│   │   ├── correlation.js      # 相关性
+│   │   ├── join.js             # 多表关联
+│   │   ├── merge.js            # 联合分析
+│   │   ├── pivot.js            # 透视
+│   │   ├── parse.js            # CSV 解析
+│   │   ├── recommend.js        # 模板推荐
+│   │   ├── _shared.js          # 公共工具
+│   │   └── engine.js           # barrel
+│   ├── components/
+│   │   ├── Views.jsx           # 9 个展示视图
+│   │   └── EChart.jsx          # ECharts 封装（动态 import）
+│   ├── __tests__/              # 14 个测试文件，156 项
+│   ├── App.jsx                 # 薄控制器
+│   ├── store.js                # Zustand 全局状态
+│   ├── Workbench.jsx           # 数据集工作台
+│   ├── TemplateLibrary.jsx     # 模板库
+│   ├── ScheduleView.jsx        # 定时任务
+│   ├── DataPreview.jsx         # 数据预览
+│   ├── CleanPanel.jsx          # 清洗面板
+│   ├── reportExport.js         # PPTX 导出
+│   ├── llmProvider.js          # LLM 流式接入
+│   └── ...
+├── .github/workflows/ci.yml    # CI（lint/test/build）
+├── docs/                        # 文档 + 本展示页
+├── vite.config.js
+└── package.json
+    </pre>
+  </section>
+
+  <footer>
+    data-analysis-agent · 纯前端数据分析智能体 ·
+    <a href="https://github.com/moliw23/ecommerce-analytics" target="_blank" rel="noreferrer">GitHub</a>
+  </footer>
+
+</div>
+
+<script>
+  // 示例看板：区域销售额（呼应 ecommerce-analytics 的看板风格）
+  var chart = echarts.init(document.getElementById('chart'));
+  chart.setOption({
+    tooltip: { trigger: 'axis' },
+    grid: { left: 48, right: 24, top: 36, bottom: 36 },
+    title: { text: '各区域销售额（示例）', left: 12, textStyle: { fontSize: 14, color: '#334155' } },
+    xAxis: { type: 'category', data: ['华东', '华南', '华北', '西南', '东北'] },
+    yAxis: { type: 'value' },
+    series: [{
+      type: 'bar',
+      data: [3280, 2670, 1940, 1260, 880],
+      itemStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: '#4f6ef7' },
+          { offset: 1, color: '#7c3aed' }
+        ])
+      },
+      barWidth: '52%'
+    }]
+  });
+  window.addEventListener('resize', function () { chart.resize(); });
+</script>
+
+</body>
+</html>
