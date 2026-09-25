@@ -49,3 +49,9 @@ backend/data/
 # ===== 门禁/校验临时输出（非源码） =====
 .gate.txt
 .lum.ps1
+
+# ===== 运行期生成物 =====
+__pycache__/
+*.pyc
+offline-report.html
+.qa/
