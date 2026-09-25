@@ -131,10 +131,15 @@ def _ensure_columns(engine: Engine) -> list[str]:
 
 
 def init_db() -> None:
-    """建表（幂等）+ 补列。数据库文件不存在即新建，不做任何删除。"""
+    """建表（幂等）+ 补列 + FTS5 虚拟表。数据库文件不存在即新建，不做任何删除。"""
     engine = get_engine()
     Base.metadata.create_all(engine)
     added = _ensure_columns(engine)
+    # FTS5 trigram 虚拟表（RAG 关键词通道；IF NOT EXISTS 幂等）
+    from app.models.knowledge import FTS_DDL
+
+    with engine.begin() as conn:
+        conn.execute(text(FTS_DDL))
     if added:
         logger.info("schema 补列完成: %s", ", ".join(added))
 

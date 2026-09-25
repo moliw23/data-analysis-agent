@@ -9,11 +9,11 @@
 
 from app.models.base import Base, SoftDeleteMixin, TimestampMixin, UuidPkMixin
 from app.models.conversation import Conversation, Memory, Message
+from app.models.knowledge import FTS_DDL, KbChunk, KbDocument, KbQuery, KnowledgeBase
 from app.models.llm import LlmCallLog, LlmProvider, LlmRoute
 from app.models.settings import AppSetting, EmbeddingProbe, FeatureFlag
 
 # 后续波次预留（本波不建表）：
-#   from app.models.knowledge import KnowledgeBase, KbDocument, KbChunk, KbQuery
 #   from app.models.dataset import Dataset, DatasetQuery
 #   from app.models.schedule import ScheduleJob, ScheduleRun, Notification
 
@@ -22,7 +22,12 @@ __all__ = [
     "Base",
     "Conversation",
     "EmbeddingProbe",
+    "FTS_DDL",
     "FeatureFlag",
+    "KbChunk",
+    "KbDocument",
+    "KbQuery",
+    "KnowledgeBase",
     "LlmCallLog",
     "LlmProvider",
     "LlmRoute",
