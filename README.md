@@ -1,42 +1,60 @@
 # 数据分析 Agent · Data Analysis Agent
 
-> 纯前端、零部署的一站式数据分析工具。用户数据全程驻留浏览器，**原始数据不出本机**（隐私优先）。
-> 从文件 / API / 数据库接入数据，经流式解析、清洗、质量诊断后，自动生成看板、图表、Text-to-SQL 问答与多格式报告。
+> 全栈自助数据分析工作台：**浏览器端分析引擎 + 本地 FastAPI 服务**。
+> 明细数据默认不出本机（隐私三档闸门），AI 只接触 schema 与统计量。从文件 / API / 数据库接入数据，经流式解析、清洗、质量诊断后，自动生成看板、图表、Text-to-SQL 问答、RAG 知识库检索与多格式报告；LLM 网关、会话记忆、真实 cron 调度由本地服务托管。
 
-[![build](https://github.com/your-name/data-analysis-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/your-name/data-analysis-agent/actions)
-[![test](https://img.shields.io/badge/test-94%20passed-brightgreen)](#测试)
+[![build](https://github.com/moliw23/data-analysis-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/moliw23/data-analysis-agent/actions)
+[![test](https://img.shields.io/badge/test-258%20passed-brightgreen)](#测试)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](#)
+
+---
+
+## ✨ 架构形态：双模式
+
+| 形态 | 触发 | 能力 |
+|---|---|---|
+| **本地服务增强模式** | 前端探测 `GET /api/v1/health` 成功 | 全部能力：LLM 网关、会话与记忆持久化、RAG 知识库、服务端只读 SQL、真实 cron 调度与通知 |
+| **纯浏览器模式** | 探测失败（1.5s 超时） | 9 视图本地分析能力 **100% 可用**，仅 AI 记忆 / 知识库 / 服务端调度不可用，状态条明示原因与启动指引 |
+
+顶栏常驻双形态状态条与隐私档位指示器（解释入口，非标签）；`Cmd/Ctrl+K` 打开命令面板跳转全部视图。
 
 ---
 
 ## ✨ 核心功能
 
+### 浏览器端（分析引擎）
+
 | 模块 | 说明 |
 |---|---|
-| **多源数据接入** | CSV / Excel / JSON / 日志 / HTTP API；支持多数据集工作台 + 自动关联键检测 + 联合分析（关联 / 堆叠） |
-| **大文件流式解析** | Web Worker + `File.stream()` 流式解码，>8MB 自动走流式，带进度 / 取消 / 采样；实测 **56 万行 / 15MB ≈ 8.9s**，主线程不卡顿 |
-| **分析看板** | 数据质量评分、AI 分析结论（LLM / 规则双模式）、智能图表、交互式筛选 / 下钻 / 联动 |
-| **分析工具箱** | 时间趋势 / Top N / 同环比 / 相关性 / 透视表 / 列画像 + **⚡ 智能图表推荐（8 类，自动按数据特征匹配）** |
-| **数据清洗** | 缺失填充 / 去重 / 异常值处理，抽样预览 |
-| **模板库** | 保存 / 复用分析模板，**跨表语义角色映射**（`matchTemplate`），模板仅含配置不含原始数据 |
-| **深度追问（Text-to-SQL）** | 自然语言 → SQL（LLM 或规则生成）→ 只读白名单校验 → alasql 真实执行 → 结果表 + 图表 |
-| **报告导出** | HTML / PDF（打印）/ Word / PPTX 四种格式 |
-| **其他** | 定时调度（演示级）、外部数据库直连（需自部署 `db-proxy`）、暗色模式、图表 PNG / Excel / CSV 导出 |
+| **多源数据接入** | CSV / Excel / JSON / 日志 / HTTP API；多数据集工作台 + 自动关联键检测 + 联合分析 |
+| **大文件流式解析** | Web Worker + `File.stream()`，>8MB 自动流式，实测 **56 万行 / 15MB ≈ 8.9s** |
+| **分析看板** | 质量评分、AI 结论（LLM / 规则双模式）、智能图表推荐（8 类）、筛选 / 下钻 / 联动 |
+| **Text-to-SQL 闭环** | 自然语言 → SQL → 只读白名单校验 → alasql 真实执行 → 结果表 + 图表；支持手改 SQL 重跑 |
+| **分析工具箱** | 时间趋势 / Top N / 同环比 / 相关性 / 透视表 / 列画像 |
+| **报告导出** | HTML / PDF / Word / PPTX / Excel / CSV 六格式，同一指标数值完全一致 |
+| **模板库** | 保存 / 复用分析模板，跨表语义角色映射；模板仅含配置不含原始数据 |
+
+### 本地服务（FastAPI 后端）
+
+| 模块 | 说明 |
+|---|---|
+| **隐私三档闸门（F0）** | strict(默认)/standard/full 单一真相源 `CAPABILITY_GATES`，贯穿路由级 / 请求体级 / capabilities 派生三类消费点；阻断统一 4030 且带可执行切档指引 |
+| **LLM 网关（F1）** | 多 Provider 托管（Fernet 加密落库、响应只回掩码）、按 taskKey 路由 + 3s fallback、调用日志（request_id/tokens/latency）、Token 统计 NULL≠0 口径 |
+| **会话与记忆（F6）** | conversations/messages/memories 全套 CRUD；上下文组装 = 记忆注入 + 滚动摘要 + token 预算裁剪；记忆总开关（关闭零注入） |
+| **RAG 知识库（F9）** | 上传 pdf/docx/md/txt/csv → 解析切分 → FTS5(trigram) 中文检索；语义通道预留（chromadb 分层安装）；关键词降级徽标；出本机凭据 `ingested_mode/ingested_at` 审计 |
+| **服务端只读 SQL（F2/F7）** | CSV 落库为真实 SQLite 表（数值列类型推断）；sql_guard 拦截 DDL/DML/多语句/PRAGMA 并给具体原因；`mode=ro` 只读连接执行 |
+| **真实调度（F7）** | APScheduler 同进程 cron——**关浏览器照常执行**；运行历史（状态/耗时/行数/错误）；连续 3 次失败自动暂停并通知（AC-23） |
+| **敏感操作确认** | 改档位 / 写密钥 / 开关记忆必须带 `X-Local-Confirm`，防 CSRF 与误点 |
 
 ---
 
 ## 🧱 技术栈
 
-- **语言 / 框架**：JavaScript（ES2022 Modules）+ React 18.3 + Vite 5
-- **可视化**：ECharts 5（含中国地图 GeoJSON 运行时拉取）
-- **浏览器内 SQL 引擎**：alasql 4（动态 `import()`，不进首屏）
-- **表格 / 文档**：SheetJS (xlsx)、pptxgenjs（动态加载）
-- **并发解析**：原生 Web Worker（`File.stream()` + `TextDecoder` + 逐字符 CSV 状态机）
-- **持久化**：IndexedDB（大文件分块落盘 / 数据集元数据）+ localStorage（配置 / 模板 / 调度）
-- **LLM 服务**：OpenAI 兼容 `/v1/chat/completions`（baseURL + key 用户自配；未配置时降级内置规则引擎）
-- **测试**：Vitest
+**前端**：React 18.3 + Vite 5 · ECharts 5 · alasql 4（动态 import）· Zustand · SheetJS / pptxgenjs · Web Worker 流式解析 · IndexedDB + localStorage · Vitest · design-tokens 设计令牌体系（Linear 式极简高密度，浅/暗双主题）
 
-> 架构取舍：纯前端 SPA，数据驻留浏览器内存 / IndexedDB —— **隐私优先、零后端部署**；仅在连接 LLM / 数据库时代理转发。
+**后端**：Python 3.12+ · FastAPI · SQLAlchemy 2.0 · SQLite（WAL + busy_timeout + FTS5 trigram）· APScheduler · httpx · cryptography(Fernet) · pydantic-settings · pytest
+
+> 架构取舍：本地优先（local-first）——后端与浏览器同机部署，服务端只存元数据与用户显式上传的服务端数据集；strict 档下明细与文档分块一律不出本机。
 
 ---
 
@@ -44,32 +62,25 @@
 
 ```mermaid
 flowchart LR
-  subgraph 接入层
-    A[文件 / API / DB] --> B[parseWorker<br/>流式解析]
+  subgraph 浏览器
+    A[文件 / API] --> B[parseWorker 流式解析]
+    B --> C[engine.js 分析引擎<br/>schema/quality/analyze/charts/join]
+    Q[自然语言] --> R[llmProvider<br/>网关优先→直连→mock]
+    S[sqlGuard 只读白名单] --> T[alasql 执行]
+    U[看板 / 工具箱 / 问答 / 报告]
   end
-  subgraph 引擎层 engine.js
-    B --> C[inferSchema<br/>类型推断]
-    C --> D[qualityCheck 质量诊断]
-    C --> E[analyze 主分析]
-    C --> F[manualChart / recommendCharts]
-    C --> G[correlation / 预测 / 异常]
-    C --> H[join / merge 多表关联]
+  subgraph 本地 FastAPI 服务
+    H[health / capabilities<br/>双形态探测]
+    G[LLM 网关<br/>providers/chat/logs]
+    K[(SQLite WAL<br/>会话/记忆/RAG/数据集/调度)]
+    P[隐私闸门<br/>4030]
+    CR[APScheduler cron]
   end
-  subgraph SQL 闭环
-    Q[自然语言] --> R[llmProvider.textToSQL]
-    R --> S[sqlGuard 只读白名单]
-    S --> T[sqlEngine.alasql 执行]
-  end
-  subgraph 表现层
-    C --> U[看板 / 工具箱 / 问答]
-    F --> U
-    T --> U
-    U --> V[报告导出 HTML/PDF/Word/PPTX]
-  end
-  subgraph 持久化
-    W[(IndexedDB)]
-    X[(localStorage)]
-  end
+  R -. 1.5s 探测 .-> H
+  R --> G
+  C -. 在线同步 .-> K
+  G --- P --- K
+  CR --> K
 ```
 
 ---
@@ -77,76 +88,75 @@ flowchart LR
 ## 🚀 快速开始
 
 ```bash
-# 安装依赖
+# 1) 前端
 npm install
+npm run dev            # http://localhost:5173
 
-# 启动开发服务器（默认 http://localhost:5173）
-npm run dev
+# 2) 本地服务（可选，启用网关/记忆/RAG/调度）
+cd backend
+python -m venv .venv
+.venv/Scripts/pip install -r requirements-core.txt
+.venv/Scripts/python run.py    # http://127.0.0.1:8000 （/docs 查看 OpenAPI）
 
-# 生产构建
-npm run build
-
-# 运行单元测试
-npm test
+# 3) 端到端验收（可选，13 项断言）
+bash scripts/e2e_check.sh
 ```
 
-打开首页点击「示例数据」即可一键体验全流程。
+打开首页点击「示例数据」即可一键体验全流程；启动本地服务后顶栏自动切为「已连接」。
 
 ---
 
 ## 🧪 测试
 
-使用 Vitest，覆盖引擎层纯函数、状态层（Zustand store）与核心视图组件：
+**共 258 项全绿**：
 
 ```bash
-npm test           # 单次运行（94 项，11 个测试文件）
-npm run coverage   # 运行并生成覆盖率报告（coverage/index.html）
-npm run test:watch  # 监听模式
+npm test                                    # 前端 Vitest：175 项 / 16 文件
+cd backend && .venv/Scripts/python -m pytest tests/   # 后端 pytest：83 项 / 7 文件
 ```
 
-覆盖点（94 项，11 文件）：
-- **引擎层**：CSV 解析与引号/换行容错、schema 语义推断、缺失值检测、**多表关联同源列自相关防护**、智能图表推荐、手动图表生成、SQL 只读白名单（拦截 DROP/UPDATE/DELETE/多语句/未知列）、alasql 真实执行（GROUP BY / 中文列名 / 截断）。
-- **状态层（Zustand store）**：交叉筛选、数据集工作台与关联自动发现、分析流水线（mock 路径）、对话式追问规则 SQL 降级、数据导入与关联编排（join / merge / 联合对比分析）。
-- **视图组件冒烟**：Home / Quality / SettingsPanel / ChatPanel / ChartToolbox 渲染与关键回调。
-- **UI 交互（重点）**：Workbench 数据集卡片勾选/查看/删除/重命名/联合分析、Upload 四 tab 切换与多表关联、PreviewView / Dashboard 质量分·洞察·图表画廊·筛选下钻·动作按钮、ChartDetail / Report、EChart 占位与下载、TemplateLibrary 保存/应用/重命名/删除/导出与各类型 buildSpec、ScheduleView 创建/试跑/启停/删除/历史清空、DataPreview 虚拟滚动与列宽拖拽、CleanPanel 各清洗步骤/影响预览/suggestFixSteps。整体 src 行覆盖 **56.7%**（组件层普遍 70%~100%）。
+- **前端（175）**：引擎层纯函数、Zustand store、全部核心视图与交互、双形态适配层（client/probe/网关回退链/4030 不回退）、命令面板、知识库与记忆面板。
+- **后端（83）**：统一信封与错误码、F0 隐私闸门三档 × 端点矩阵逐格断言、密钥明文零泄漏、LLM 网关 fallback 与 Token 口径（NULL≠0）、会话/记忆/上下文裁剪、RAG 入库检索与 4091、sql_guard 拦截矩阵、调度三连败熔断与通知。
+- **端到端**：`scripts/e2e_check.sh` 真实启动 uvicorn + curl 13 项断言（健康/档位/4010/4030/掩码/上传/只读 SQL/拦截）。
 
 ---
 
 ## 🔐 安全说明
 
-- **数据隐私**：原始数据仅存在于浏览器本地，不上传任何服务器。
-- **Text-to-SQL 白名单**：仅允许单条只读 `SELECT`，强制列名白名单，拦截一切 DDL / DML / 分号多语句，杜绝 LLM 生成的危险语句执行。
-- **报告导出转义**：所有数据 / LLM 输出写入 HTML 报告前经 `esc()` 转义，防止存储型 XSS。
-- **LLM Key**：默认存于 localStorage（建议自配后端代理转发，避免明文长期留存；可在设置中选择「仅本次会话」不持久化）。
+- **隐私档位**：strict 档下明细与文档分块一律不出本机；档位语义是"禁外传"而非"禁本地访问"。
+- **密钥托管**：API Key Fernet 加密落库，任何响应/日志只出现掩码（`sk-***abc`），grep 不到明文。
+- **双重 SQL 防线**：前端 sqlGuard 白名单 + 后端 sql_guard 拦截并返回具体命中原因。
+- **Text-to-SQL 铁律**：LLM 只生成 SQL 文本与解释，所有数字由真实引擎计算，模型不碰原始数据。
+- **报告转义**：数据 / LLM 输出写入 HTML 前经 `esc()` 转义，防存储型 XSS。
+- **审计**：文档入库记录 `ingested_mode/ingested_at`（出本机凭据），知识库统计提供按入库档位筛选。
 
 ---
 
 ## 📐 目录结构
 
 ```
-src/
-  engine.js          # 引擎桶文件（barrel）：仅 re-export，真实实现见 engine/ 子模块
-  engine/            # 引擎按职责拆分：_shared/parse/schema/clean/timeseries/pivot/charts/correlation
-                     #   /manualChart/analyze/join/merge/export/recommend
-  App.jsx            # 控制器：全局状态 + 视图路由编排（展示组件已抽到 components/）
-  components/
-    EChart.jsx       # ECharts 封装 + 地图底图 + 主题上色基建
-    Views.jsx        # Home/Upload/PreviewView/Dashboard/ChartDetail/Quality/Report/SettingsPanel/ChatPanel
-  Workbench.jsx      # 多数据集工作台
-  ChartToolbox.jsx   # 分析工具箱 + 智能推荐
-  TemplateLibrary.jsx / templateStore.js  # 模板库
-  parseWorker.js / streamParse.js         # 大文件流式解析
-  sqlGuard.js / sqlEngine.js / llmProvider.js  # Text-to-SQL 闭环
-  reportExport.js    # 报告导出（HTML/Word/PDF/PPTX）
-  schedule.js / ScheduleView.jsx          # 定时调度
-  ...
-server/db-proxy.mjs  # 可选：外部数据库直连代理
+src/                    # 浏览器端（React SPA）
+  engine/               # 分析引擎（parse/schema/clean/analyze/charts/join/export…）
+  backend/              # 双形态适配层：client(信封)/probe(探测)/gateway(网关路由)/conversationSync
+  components/           # Views/EChart/ModeBanner/PrivacyIndicator/CommandPalette/KnowledgeView/MemoryPanel
+  sqlGuard.js / sqlEngine.js / llmProvider.js   # Text-to-SQL 闭环
+  design-tokens.css     # 设计令牌唯一真相源
+backend/                # 本地服务（FastAPI）
+  app/api/routes/       # health/settings/llm/conversations/memories/knowledge/datasets/schedules
+  app/services/         # 业务编排（llm/conversation/knowledge/dataset/schedule/privacy）
+  app/repositories/     # 数据访问（分层：route→service→repo→model）
+  app/core/             # config/security/errors/middleware/privacy(闸门唯一真相源)
+  tests/                # pytest 83 项（含 F0 全矩阵）
+docs/                   # PRD / 架构 / UIUX / Spec 契约 / OpenAPI(47 path) / ADR
+scripts/                # e2e_check.sh 端到端验收 / 契约门禁
+server/db-proxy.mjs     # 可选：外部数据库直连代理
 ```
 
 ---
 
 ## ✅ 阶段性成果
 
-- 完整数据分析闭环：接入 → 解析 → 清洗 → 质量 → 看板 → 问答 → 报告
-- 4 大 PRD 模块全部落地：暗色模式 + 报告导出、大文件流式解析、模板复用、Text-to-SQL 闭环
-- 工程规范：Vitest 单测、ESLint/Prettier、CI 工作流
+- 完整分析闭环：接入 → 解析 → 清洗 → 质量 → 看板 → 问答 → RAG → 报告，**双形态（浏览器独跑 / 本地服务增强）**
+- 后端 8 个功能波全部落地并通过端到端验收（`e2e_check.sh` 13/13）
+- 26 条 EARS 验收标准中 P0 全部达成；契约先行（OpenAPI 47 path / Spec 13 章）
+- 工程规范：Vitest + pytest 双测试体系、契约门禁脚本、CI 工作流
