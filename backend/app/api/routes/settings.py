@@ -34,3 +34,14 @@ def put_privacy_mode(
 @router.get("/", include_in_schema=False)
 def get_settings_overview(db: Session = Depends(get_db)) -> dict:
     return envelope(0, privacy_service.overview(db), "ok")
+
+
+@router.put("/memory-switch", summary="记忆总开关（AC-21：关闭后 context 零注入）",
+            dependencies=[Depends(require_local_confirm)])
+def put_memory_switch(payload: dict, db: Session = Depends(get_db)) -> dict:
+    from app.repositories import memory_repo
+
+    enabled = bool(payload.get("enabled", True))
+    memory_repo.set_memory_enabled(db, enabled)
+    db.commit()
+    return envelope(0, {"enabled": enabled}, "记忆开关已更新")

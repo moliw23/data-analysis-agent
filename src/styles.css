@@ -812,3 +812,54 @@ body {
   border: none; background: none; cursor: pointer;
   font-size: 12px; font-weight: 600; color: var(--accent); padding: 4px 0;
 }
+
+/* ============ Wave 3: 命令面板 / 知识库 / 记忆面板 ============ */
+.cp-mask { position: fixed; inset: 0; z-index: 120; background: rgb(0 0 0 / 0.25); display: flex; justify-content: center; align-items: flex-start; padding-top: 96px; }
+.cp-panel { width: 560px; max-width: 92vw; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--elev-3); overflow: hidden; }
+.cp-input-row { display: flex; align-items: center; gap: 8px; padding: 12px 14px; color: var(--muted); border-bottom: 1px solid var(--border); }
+.cp-input { flex: 1; border: none; outline: none; background: none; font-size: 15px; color: var(--fg); }
+.cp-list { list-style: none; margin: 0; padding: 6px; max-height: 320px; overflow: auto; }
+.cp-item { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 9px 12px; border: none; background: none; border-radius: var(--radius-sm); font-size: 14px; color: var(--fg); cursor: pointer; text-align: left; }
+.cp-item.is-active { background: var(--accent-50); }
+.cp-item-label { flex: 1; }
+.cp-empty { padding: 14px; font-size: 13px; color: var(--muted); text-align: center; }
+.cp-foot { padding: 8px 14px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+
+.kv-wrap { padding: 16px 20px; display: grid; gap: 12px; }
+.kv-cols { display: grid; grid-template-columns: 280px 1fr; gap: 14px; align-items: start; }
+.kv-side { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 10px; }
+.kv-create { display: flex; gap: 6px; margin-bottom: 8px; }
+.kv-input { flex: 1; min-height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--fg); }
+.kv-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.kv-item { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; width: 100%; padding: 8px; border: none; background: none; border-radius: var(--radius-sm); cursor: pointer; color: var(--fg); text-align: left; }
+.kv-item.is-current { background: var(--accent-50); border: 1px solid var(--accent); }
+.kv-item-name { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kv-badge { font-size: 10px; padding: 1px 6px; border-radius: var(--radius-pill); background: var(--n-100); color: var(--muted); }
+.kv-badge--ready { background: var(--success-bg); color: var(--success); }
+.kv-badge--building { background: var(--warn-bg); color: var(--warn); }
+.kv-badge--failed { background: var(--danger-bg); color: var(--danger); }
+.kv-count { grid-column: 1 / -1; font-size: 11px; color: var(--muted); }
+.kv-main { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; display: grid; gap: 12px; }
+.kv-compliance { font-size: 12px; color: var(--warn); border-left: 3px solid var(--warn); padding-left: 8px; margin: 6px 0 0; }
+.kv-docs { width: 100%; border-collapse: collapse; font-size: 13px; }
+.kv-docs th, .kv-docs td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.kv-search-row { display: flex; gap: 6px; }
+.kv-result-head { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.kv-latency { font-family: var(--font-mono); }
+.kv-hits { list-style: decimal; padding-left: 20px; display: grid; gap: 10px; }
+.kv-hit-src { font-size: 11px; color: var(--muted); }
+.kv-hit-txt { font-size: 13px; line-height: 1.55; }
+.kv-msg { padding: 8px 12px; background: var(--warn-bg); border-left: 3px solid var(--warn); color: var(--warn); font-size: 13px; border-radius: var(--radius-sm); }
+.kv-offline { display: flex; gap: 12px; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius-lg); padding: 20px; color: var(--muted); }
+.kv-empty { font-size: 13px; color: var(--muted); padding: 10px; }
+
+.mp-wrap { margin-top: 16px; padding: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.mp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.mp-switch { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fg); }
+.mp-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.mp-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.mp-item.is-disabled { opacity: 0.5; }
+.mp-content { flex: 1; font-size: 13px; line-height: 1.5; }
+.mp-weight { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.mp-actions { display: inline-flex; gap: 4px; }
+.mp-edit { display: flex; flex: 1; gap: 6px; align-items: center; }

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useMemo } from 'react'
-import { Sun, Moon, MessageCircle, Printer, FileText, Presentation, FileSpreadsheet, Sheet, Download, Home as HomeIcon, Upload as UploadIcon, BarChart3, AlertTriangle, Clock, Settings } from 'lucide-react'
+import { Sun, Moon, MessageCircle, Printer, FileText, Presentation, FileSpreadsheet, Sheet, Download, BookOpen, Home as HomeIcon, Upload as UploadIcon, BarChart3, AlertTriangle, Clock, Settings } from 'lucide-react'
 import { useStore } from './store.js'
 import { inferSchema, suggestQuestions, analyze, applyFilters, exportTableXLSX, exportTableCSV } from './engine.js'
 import { isLLMConfigured } from './llmProvider.js'
@@ -8,6 +8,9 @@ import { getSchedules, shouldRunToday, touchRun } from './schedule.js'
 import { startBackendWatch } from './backend/probe.js'
 import ModeBanner from './components/ModeBanner.jsx'
 import PrivacyIndicator from './components/PrivacyIndicator.jsx'
+import CommandPalette from './components/CommandPalette.jsx'
+import KnowledgeView from './components/KnowledgeView.jsx'
+import MemoryPanel from './components/MemoryPanel.jsx'
 import ChartToolbox from './ChartToolbox.jsx'
 import TemplateLibrary from './TemplateLibrary.jsx'
 import CleanPanel from './CleanPanel.jsx'
@@ -15,7 +18,7 @@ import { Home, Upload, PreviewView, Dashboard, ChartDetail, Quality, Report, Set
 
 const ScheduleView = React.lazy(() => import('./ScheduleView.jsx'))
 
-const TITLE = { upload: '上传 / 接入数据', preview: '数据预览', dashboard: '分析看板', chart: '图表详情', quality: '数据质量诊断', report: '分析报告', schedule: '定时调度', settings: '模型接入' }
+const TITLE = { knowledge: '知识库', upload: '上传 / 接入数据', preview: '数据预览', dashboard: '分析看板', chart: '图表详情', quality: '数据质量诊断', report: '分析报告', schedule: '定时调度', settings: '模型接入' }
 
 export default function App() {
   // ---------- 订阅状态 ----------
@@ -53,6 +56,7 @@ export default function App() {
   const streamState = useStore(s => s.streamState)
   const cleanOpen = useStore(s => s.cleanOpen)
   const cleanHistoryLen = useStore(s => s.cleanHistory.length)
+  const [cpOpen, setCpOpen] = React.useState(false)
   const closePreview = useStore(s => s.closePreview)
 
   // ---------- 订阅动作 ----------
@@ -106,6 +110,18 @@ export default function App() {
   useEffect(() => {
     startBackendWatch()
     return () => {}
+  }, [])
+
+  // AC-17: Cmd/Ctrl+K 唤起命令面板
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault()
+        setCpOpen(v => !v)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   // 主题应用：跟随 system 或手动切换，写入 data-theme 并分发事件（启动即生效）
@@ -210,6 +226,10 @@ export default function App() {
             <span className="nav-ic"><AlertTriangle size={18} /></span>
             <span className="nav-label">数据质量</span>
           </button>
+          <button className={`nav-item ${activeNav === 'knowledge' ? 'nav-active' : ''}`} onClick={() => setView('knowledge')}>
+            <span className="nav-ic"><BookOpen size={18} /></span>
+            <span className="nav-label">知识库</span>
+          </button>
           <button className={`nav-item ${activeNav === 'schedule' ? 'nav-active' : ''}`} onClick={() => setView('schedule')}>
             <span className="nav-ic"><Clock size={18} /></span>
             <span className="nav-label">定时调度</span>
@@ -248,6 +268,7 @@ export default function App() {
           )}
         </div>
         <ModeBanner />
+        <CommandPalette open={cpOpen} onClose={() => setCpOpen(false)} onNavigate={(id) => setView(id)} />
 
         <div className="shell-main">
           {view === 'home' && <Home onUpload={() => setView('upload')} onSample={handleSample} onSchedule={() => setView('schedule')} onSettings={() => setView('settings')} llmOn={isLLMConfigured()} />}
@@ -257,12 +278,13 @@ export default function App() {
       {view === 'chart' && selectedChart && <ChartDetail chart={selectedChart} onBack={() => setView('dashboard')} />}
       {view === 'quality' && quality && <Quality quality={quality} table={table} onFix={openClean} />}
       {view === 'report' && <Report html={reportHTML} iframeRef={iframeRef} />}
+      {view === 'knowledge' && <KnowledgeView onOpenSettings={() => setView('settings')} />}
       {view === 'schedule' && (
         <React.Suspense fallback={<div className="loading">正在加载调度模块…</div>}>
           <ScheduleView hasData={!!table} onRun={runSchedule} />
         </React.Suspense>
       )}
-      {view === 'settings' && <SettingsPanel theme={theme} setTheme={setTheme} onSaved={() => showToast('LLM 配置已保存')} />}
+      {view === 'settings' && <><SettingsPanel theme={theme} setTheme={setTheme} onSaved={() => showToast('LLM 配置已保存')} /><MemoryPanel /></>}
 
       {(view === 'dashboard') && (
         <>
