@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <link rel="icon" href="data:,">
+    <title>数据分析 Agent</title>
+    <script>
+      // 防闪烁：React 加载前即确定主题，避免浅色闪一下再变暗
+      (function () {
+        try {
+          var t = localStorage.getItem('data-agent.theme') || 'system'
+          var eff = t === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : t
+          document.documentElement.setAttribute('data-theme', eff)
+        } catch (e) {}
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

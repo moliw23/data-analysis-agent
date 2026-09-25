@@ -1,0 +1,37 @@
+# ===== 依赖 / 构建 / 缓存 / 临时 =====
+node_modules/
+dist/
+dist-ssr/
+coverage/
+coverage2/
+tmp/
+.vite/
+.vite_bak_*/
+*.local
+
+# Vite 临时文件（safe-delete 无法删除的残留）
+vite.config.js.timestamp-*.mjs
+*.timestamp-*.mjs
+
+# ===== 环境与密钥 =====
+.env
+.env.*
+*.log
+
+# ===== 编辑器 / OS =====
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ===== 工具私有数据（WorkBuddy 记忆等，非源码） =====
+.workbuddy/
+
+# ===== 打包/压缩产物 =====
+*.tgz
+*.zip
+
+# 误生成/打包产物
+/dev/null

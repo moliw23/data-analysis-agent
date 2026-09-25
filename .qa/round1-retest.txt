@@ -1,0 +1,3 @@
+  [FINDING] T03: 零重叠同名字段 score=0.75, confidence=low, rate=0% (rate=0 但 confidence=high)
+
+===== 引擎测试汇总: 19/19 通过 =====
