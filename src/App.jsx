@@ -5,6 +5,9 @@ import { inferSchema, suggestQuestions, analyze, applyFilters, exportTableXLSX, 
 import { isLLMConfigured } from './llmProvider.js'
 import { exportPDF, exportWord, exportPPTX } from './reportExport.js'
 import { getSchedules, shouldRunToday, touchRun } from './schedule.js'
+import { startBackendWatch } from './backend/probe.js'
+import ModeBanner from './components/ModeBanner.jsx'
+import PrivacyIndicator from './components/PrivacyIndicator.jsx'
 import ChartToolbox from './ChartToolbox.jsx'
 import TemplateLibrary from './TemplateLibrary.jsx'
 import CleanPanel from './CleanPanel.jsx'
@@ -98,6 +101,12 @@ export default function App() {
 
   const fileRef = useRef(null)
   const iframeRef = useRef(null)
+
+  // 双形态探测：启动即开始，30s 轮询 + 可见性重探（docs/04 §2.2）
+  useEffect(() => {
+    startBackendWatch()
+    return () => {}
+  }, [])
 
   // 主题应用：跟随 system 或手动切换，写入 data-theme 并分发事件（启动即生效）
   useEffect(() => {
@@ -222,6 +231,7 @@ export default function App() {
             <div className="topbar-title">{TITLE[view] || '概览'}</div>
             {fileName && <div className="topbar-sub">{fileName} · {table ? `${table.rows.length} 行` : ''}</div>}
           </div>
+          <PrivacyIndicator onOpenSettings={() => setView('settings')} />
           <button className="icon-btn" title={appliedTheme === 'dark' ? '切换为浅色' : '切换为暗色'} onClick={() => setTheme(appliedTheme === 'dark' ? 'light' : 'dark')}>
             {appliedTheme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
@@ -237,6 +247,7 @@ export default function App() {
             </>
           )}
         </div>
+        <ModeBanner />
 
         <div className="shell-main">
           {view === 'home' && <Home onUpload={() => setView('upload')} onSample={handleSample} onSchedule={() => setView('schedule')} onSettings={() => setView('settings')} llmOn={isLLMConfigured()} />}

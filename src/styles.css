@@ -753,3 +753,62 @@ body {
 }
 
 .inline-ok { display: inline-flex; align-items: center; gap: 6px; color: var(--ok); font-weight: 600; }
+
+/* ============ P2-3 双形态状态条 + 隐私档位指示器（docs/04 §3） ============ */
+.mode-banner {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 32px; padding: 4px 24px;
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--muted); flex-wrap: wrap;
+}
+.mode-banner .spin { animation: mode-spin 1s linear infinite; }
+@keyframes mode-spin { to { transform: rotate(360deg); } }
+.mode-badge {
+  display: inline-flex; align-items: center;
+  padding: 1px 8px; border-radius: var(--radius-pill);
+  background: var(--n-100); border: 1px solid var(--border);
+  font-size: 11px; color: var(--muted); white-space: nowrap;
+}
+.mode-badge--warn { background: var(--warn-bg); border-color: var(--warn-bd); color: var(--warn); }
+.mode-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: none; background: none; cursor: pointer;
+  font-size: 12px; color: var(--accent); padding: 4px 6px;
+}
+.mode-link:hover { text-decoration: underline; }
+.mode-guide {
+  width: 100%; padding: 6px 10px; margin-top: 2px;
+  background: var(--bg); border: 1px dashed var(--border); border-radius: var(--radius-sm);
+  font-size: 12px; color: var(--muted);
+}
+.mode-guide code { font-family: var(--font-mono); color: var(--fg); }
+
+.privacy-wrap { position: relative; }
+.privacy-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 10px; border-radius: var(--radius-md);
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--muted); font-size: 12px; cursor: pointer;
+}
+.privacy-btn:hover { border-color: var(--accent); color: var(--accent); }
+.privacy-pop {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 90;
+  width: 264px; padding: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-md); box-shadow: var(--elev-2);
+}
+.privacy-pop__title { font-size: 13px; font-weight: 600; color: var(--fg); }
+.privacy-pop__desc { margin: 6px 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.privacy-pop__list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.privacy-pop__list li {
+  padding: 6px 8px; border-radius: var(--radius-sm);
+  border: 1px solid transparent; display: grid; gap: 2px;
+}
+.privacy-pop__list li.is-current { border-color: var(--accent); background: var(--accent-50); }
+.privacy-pop__mode { font-size: 12px; font-weight: 600; color: var(--fg); }
+.privacy-pop__mode-desc { font-size: 11px; line-height: 1.45; color: var(--muted); }
+.privacy-pop__go {
+  display: inline-flex; align-items: center; gap: 2px;
+  border: none; background: none; cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--accent); padding: 4px 0;
+}
