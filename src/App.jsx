@@ -218,11 +218,11 @@ export default function App() {
             <span className="nav-ic"><UploadIcon size={18} /></span>
             <span className="nav-label">上传接入</span>
           </button>
-          <button className={`nav-item ${activeNav === 'dashboard' ? 'nav-active' : ''} ${!result ? 'nav-disabled' : ''}`} onClick={() => goNav('dashboard')} disabled={!result}>
+          <button className={`nav-item ${activeNav === 'dashboard' ? 'nav-active' : ''}`} onClick={() => setView('dashboard')}>
             <span className="nav-ic"><BarChart3 size={18} /></span>
             <span className="nav-label">分析看板</span>
           </button>
-          <button className={`nav-item ${activeNav === 'quality' ? 'nav-active' : ''} ${!quality ? 'nav-disabled' : ''}`} onClick={() => goNav('quality')} disabled={!quality}>
+          <button className={`nav-item ${activeNav === 'quality' ? 'nav-active' : ''}`} onClick={() => setView('quality')}>
             <span className="nav-ic"><AlertTriangle size={18} /></span>
             <span className="nav-label">数据质量</span>
           </button>
@@ -274,8 +274,10 @@ export default function App() {
           {view === 'home' && <Home onUpload={() => setView('upload')} onSample={handleSample} onSchedule={() => setView('schedule')} onSettings={() => setView('settings')} llmOn={isLLMConfigured()} />}
       {view === 'upload' && <Upload onFile={handleFile} onSample={handleSample} fileRef={fileRef} table={table} fileName={fileName} baseTable={baseTable} baseFileName={baseFileName} joinInfo={joinInfo} uploadTab={uploadTab} onTabChange={setUploadTab} joinDraft={joinDraft} setJoinDraft={setJoinDraft} onJoin={handleJoin} onUndoJoin={handleUndoJoin} datasets={datasets} selectedIds={selectedIds} onToggleSelect={handleToggleSelect} autoLinks={autoLinks} mergeMeta={mergeMeta} batchBusy={batchBusy} onBatchFiles={handleBatchFiles} onRemoveDataset={removeDataset} onRenameDataset={renameDataset} onRunSingle={runSingleAnalysis} onRunMerge={runMergeAnalysis} idbRestoring={idbRestoring} onPreviewDataset={openPreview} onExcludeLink={excludeLink} onIncludeLink={includeLink} streamState={streamState} onCancelStream={cancelStream} />}
       {view === 'preview' && previewDs && <PreviewView key={previewDs.id} ds={previewDs} onClose={closePreview} onAnalyze={runSingleAnalysis} />}
+      {view === 'dashboard' && !result && <div className="screen"><div className="card"><div className="card-title">分析看板</div><div className="muted">还没有分析结果。请先在「上传 / 接入数据」导入文件或加载示例数据，分析会自动运行并生成看板。</div><button className="btn btn-primary" style={{ width: 'auto', minHeight: 40, marginTop: 10 }} onClick={() => setView('upload')}>去接入数据</button></div></div>}
       {view === 'dashboard' && result && <Dashboard result={result} quality={quality} aiMode={aiMode} onChart={openChart} onQuality={() => setView('quality')} onReport={openReport} onChat={() => setChatOpen(true)} onSchedule={() => setView('schedule')} baseTable={baseTable} joinInfo={joinInfo} onJoinOpen={openJoin} onUndoJoin={handleUndoJoin} mergeMeta={mergeMeta} onBackToWorkbench={backToWorkbench} onUndoMerge={undoMerge} onToolbox={() => setToolboxOpen(true)} onTemplate={() => setTemplateOpen(true)} onClean={() => openClean(null)} canUndoClean={cleanHistoryLen > 0} onUndoClean={undoClean} fileName={fileName} activeFilters={activeFilters} filterDimCandidates={filterDimCandidates} topValuesForDim={topValuesForDim} toggleFilterValue={toggleFilterValue} clearFilters={clearFilters} removeFilterDim={removeFilterDim} onDrill={handleChartDrill} />}
       {view === 'chart' && selectedChart && <ChartDetail chart={selectedChart} onBack={() => setView('dashboard')} />}
+      {view === 'quality' && !quality && <div className="screen"><div className="card"><div className="card-title">数据质量诊断</div><div className="muted">还没有可诊断的数据。请先在「上传 / 接入数据」导入文件或加载示例数据，质量诊断会随分析自动生成。</div><button className="btn btn-primary" style={{ width: 'auto', minHeight: 40, marginTop: 10 }} onClick={() => setView('upload')}>去接入数据</button></div></div>}
       {view === 'quality' && quality && <Quality quality={quality} table={table} onFix={openClean} />}
       {view === 'report' && <Report html={reportHTML} iframeRef={iframeRef} />}
       {view === 'knowledge' && <KnowledgeView onOpenSettings={() => setView('settings')} />}

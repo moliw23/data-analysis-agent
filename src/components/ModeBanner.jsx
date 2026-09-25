@@ -41,7 +41,7 @@ export default function ModeBanner({ onOpenSettings }) {
   return (
     <div className="mode-banner" data-status="offline">
       <Circle size={8} fill="var(--n-400)" stroke="none" aria-hidden="true" />
-      <span>本地模式——AI 记忆、知识库、服务端调度不可用，分析能力完整可用</span>
+      <span>本地模式——对话记忆、知识库、服务端调度不可用，分析能力完整可用</span>
       <button
         className="mode-link"
         disabled={retrying}
