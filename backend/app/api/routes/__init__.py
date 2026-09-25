@@ -6,16 +6,25 @@
 顺序无关（各 router 前缀互不重叠），但保持"基础设施 -> 业务"的阅读顺序。
 """
 
-from app.api.routes import datasets, health, knowledge, llm, settings
+from app.api.routes import (
+    conversations,
+    datasets,
+    health,
+    knowledge,
+    llm,
+    memories,
+    settings,
+)
 
 ROUTERS = [
     health.router,
     settings.router,
     llm.router,
+    conversations.router,
+    memories.router,
     knowledge.router,
     datasets.router,
     # 后续波次追加：
-    #   conversations.router, memories.router,
     #   schedules.router, notifications.router, db_proxy.router,
 ]
 

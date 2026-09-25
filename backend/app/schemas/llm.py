@@ -20,6 +20,7 @@ TASK_KEYS: tuple[str, ...] = (
     "memory_summarize",
     "chunk_enrich",
     "report_narrate",
+    "chat_reply",  # P2-4 内部任务：会话 autoRespond 应答（openapi TaskKey 已同步追加）
 )
 
 TaskKey = Enum("TaskKey", {k: k for k in TASK_KEYS}, type=str)

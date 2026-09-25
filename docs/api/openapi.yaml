@@ -1984,7 +1984,7 @@ components:
 
     TaskKey:
       type: string
-      enum: [plan_analysis, narrate_insights, parse_question, text_to_sql, memory_summarize, chunk_enrich, report_narrate]
+      enum: [plan_analysis, narrate_insights, parse_question, text_to_sql, memory_summarize, chunk_enrich, report_narrate, chat_reply]
 
     ChatMessage:
       type: object
