@@ -11,6 +11,7 @@ from app.models.base import Base, SoftDeleteMixin, TimestampMixin, UuidPkMixin
 from app.models.dataset import Dataset, DatasetQuery
 from app.models.conversation import Conversation, Memory, Message
 from app.models.knowledge import FTS_DDL, KbChunk, KbDocument, KbQuery, KnowledgeBase
+from app.models.schedule import Notification, ScheduleJob, ScheduleRun
 from app.models.llm import LlmCallLog, LlmProvider, LlmRoute
 from app.models.settings import AppSetting, EmbeddingProbe, FeatureFlag
 
@@ -35,6 +36,9 @@ __all__ = [
     "LlmProvider",
     "LlmRoute",
     "Memory",
+    "Notification",
+    "ScheduleJob",
+    "ScheduleRun",
     "Message",
     "SoftDeleteMixin",
     "TimestampMixin",

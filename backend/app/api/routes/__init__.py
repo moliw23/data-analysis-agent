@@ -13,6 +13,7 @@ from app.api.routes import (
     knowledge,
     llm,
     memories,
+    schedules,
     settings,
 )
 
@@ -24,6 +25,8 @@ ROUTERS = [
     memories.router,
     knowledge.router,
     datasets.router,
+    schedules.router,
+    schedules.notif_router,
     # 后续波次追加：
     #   schedules.router, notifications.router, db_proxy.router,
 ]
