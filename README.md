@@ -76,9 +76,9 @@ flowchart LR
     P[隐私闸门<br/>4030]
     CR[APScheduler cron]
   end
-  R -. 1.5s 探测 .-> H
+  R -. "1.5s 探测" .-> H
   R --> G
-  C -. 在线同步 .-> K
+  C -. "在线同步" .-> K
   G --- P --- K
   CR --> K
 ```
